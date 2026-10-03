@@ -1,4 +1,4 @@
-package src.main.java.br.edu.mata58.dinheiro;
+package br.edu.mata58.dinheiro;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
