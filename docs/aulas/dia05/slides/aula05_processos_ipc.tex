@@ -1,0 +1,621 @@
+\documentclass[aspectratio=169]{beamer}
+
+\usetheme{metropolis}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{listings}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, fit, backgrounds}
+
+\setbeamertemplate{frame numbering}[fraction]
+\metroset{block=fill}
+
+\definecolor{termbg}{RGB}{40,44,52}
+\definecolor{termfg}{RGB}{220,220,220}
+\definecolor{codekw}{RGB}{235,129,27}
+\definecolor{codecom}{RGB}{140,150,160}
+\definecolor{codestr}{RGB}{152,195,121}
+
+\lstdefinestyle{terminal}{
+    backgroundcolor=\color{termbg},
+    basicstyle=\ttfamily\footnotesize\color{termfg},
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{termbg},
+    framerule=2pt,
+    xleftmargin=4pt,
+    xrightmargin=4pt,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false
+}
+
+\lstdefinestyle{codigo}{
+    style=terminal,
+    language=C,
+    keywordstyle=\color{codekw}\bfseries,
+    commentstyle=\color{codecom}\itshape,
+    stringstyle=\color{codestr},
+    morekeywords={pid_t, size_t},
+    moredelim=[is][\color{codekw}\bfseries]{@}{@}
+}
+
+% Elementos visuais das figuras
+\tikzset{
+    proc/.style={draw=mDarkTeal, fill=mDarkTeal!8, rounded corners=3pt, thick,
+        minimum width=2.1cm, minimum height=0.8cm, align=center, font=\small},
+    procf/.style={proc, draw=mDarkTeal!70, fill=white, minimum width=1.3cm, font=\footnotesize},
+    destaque/.style={proc, draw=mLightBrown, fill=mLightBrown!12},
+    arquivo/.style={draw=black!50, fill=black!5, thick, minimum width=2.2cm,
+        minimum height=1.1cm, align=center, font=\small},
+    seta/.style={-{Stealth[length=2.2mm]}, thick, draw=mDarkTeal},
+    setad/.style={-{Stealth[length=2.2mm]}, very thick, draw=mLightBrown},
+    rotulo/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
+    celula/.style={draw=mDarkTeal, minimum size=0.75cm, font=\ttfamily\small, fill=white}
+}
+
+\title{Processos e comunicação entre processos}
+\subtitle{fork, memória independente e pipe na prática}
+\author{Weslei Ferreira Santos}
+\institute{MATA58 · Sistemas Operacionais\\Instituto de Computação / UFBA}
+\date{5 de outubro de 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{Agenda}
+\begin{center}
+\small
+\begin{tabular}{@{}r@{\hspace{1.2em}}l@{}}
+\toprule
+\textbf{min} & \textbf{Etapa} \\
+\midrule
+0--8   & Programa e processo \\
+8--20  & Uma chamada de \texttt{fork()} \\
+20--33 & \texttt{fork()} dentro do laço: \texttt{fork2.c} \\
+33--45 & Memória independente e \texttt{waitpid} \\
+45--53 & Checagem em duplas \\
+53--65 & Pipe: canal, pontas e bloqueio \\
+65--75 & Aplicação com vários processos: \texttt{pipe2.c} \\
+75--87 & \textbf{Prática}: filho envia, pai recebe \\
+87--90 & Bilhete de saída \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{frame}
+
+\begin{frame}{A pergunta desta aula}
+\begin{center}
+{\Large \textbf{Como um processo recebe o resultado\\[0.2em] calculado por outro?}}
+\end{center}
+
+\vspace{1em}
+\textbf{Ao final, você deve conseguir:}
+\begin{itemize}
+    \item identificar os retornos de \texttt{fork()} no pai e no filho;
+    \item explicar por que cada processo tem a sua própria memória;
+    \item desenhar a árvore de processos de um laço com \texttt{fork()};
+    \item completar uma comunicação filho $\rightarrow$ pai com \texttt{pipe()}.
+\end{itemize}
+\end{frame}
+
+% ============================================================
+\section{Programa e processo}
+% ============================================================
+
+\begin{frame}{Um programa ou dois processos?}
+\emph{Se eu executar o mesmo programa em dois terminais, tenho um programa ou dois processos?}
+
+\vspace{0.8em}
+\begin{center}
+\begin{tikzpicture}
+    \node[arquivo] (prog) {\texttt{fork2}\\\scriptsize arquivo no disco};
+    \node[proc, right=3cm of prog, yshift=0.75cm] (p1) {Processo\\\scriptsize PID 4210};
+    \node[proc, right=3cm of prog, yshift=-0.75cm] (p2) {Processo\\\scriptsize PID 4231};
+    \draw[seta] (prog.east) -- node[rotulo, above, sloped] {executa} (p1.west);
+    \draw[seta] (prog.east) -- node[rotulo, below, sloped] {executa} (p2.west);
+    \node[right=0.4cm of p1, font=\scriptsize, align=left] {pilha, heap,\\registradores};
+    \node[right=0.4cm of p2, font=\scriptsize, align=left] {pilha, heap,\\registradores};
+\end{tikzpicture}
+\end{center}
+
+\pause
+\begin{alertblock}{Definição}
+O arquivo contém as instruções. Cada execução é um \textbf{processo}: uma instância com PID, registradores, pilha, heap e recursos próprios.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Pergunta para guardar}
+\begin{center}
+{\large Se uma dessas execuções altera uma variável,\\[0.3em]
+a outra \emph{necessariamente} observa a alteração?}
+\end{center}
+
+\vspace{1.5em}
+\centering Anote sua hipótese. Vamos testá-la com \texttt{fork2.c}.
+\end{frame}
+
+% ============================================================
+\section{Uma chamada de fork()}
+% ============================================================
+
+\begin{frame}[fragile]{Uma chamada, dois caminhos}
+\begin{columns}[T]
+\column{0.55\textwidth}
+\begin{lstlisting}[style=codigo]
+pid_t pid = fork();
+if (pid == -1) {
+    /* falha: nenhum filho criado */
+} else if (pid == 0) {
+    /* este caminho executa no filho */
+} else {
+    /* executa no pai; pid = filho */
+}
+/* pai e filho podem chegar aqui */
+\end{lstlisting}
+
+\column{0.42\textwidth}
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Quem} & \textbf{fork() retorna} \\
+\midrule
+Filho & \texttt{0} \\
+Pai   & PID do filho \\
+Falha & \texttt{-1} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{columns}
+
+\vspace{0.6em}
+\begin{alertblock}{O filho não recomeça o \texttt{main}}
+Pai e filho continuam \textbf{depois} da chamada, cada um com seu retorno.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{\texttt{getpid()} e a ordem de execução}
+\begin{itemize}
+    \item \texttt{getpid()} retorna o PID do processo que \emph{está executando}.
+    \item O valor que \texttt{fork()} devolve ao pai identifica o \textbf{filho}, não o próprio pai.
+\end{itemize}
+
+\vspace{1em}
+\textbf{Previsão:} o pai necessariamente executa o próximo \texttt{printf} antes do filho?
+
+\pause
+\begin{exampleblock}{Resposta}
+Não. A ordem depende do escalonamento e da sincronização que o programa estabelecer.
+\end{exampleblock}
+\end{frame}
+
+% ============================================================
+\section{fork() dentro do laço}
+% ============================================================
+
+\begin{frame}[fragile]{\texttt{fork2.c}: o trecho central}
+\begin{lstlisting}[style=codigo]
+int *v = calloc((size_t)tamanho, sizeof *v);   /* tamanho = 3 */
+pid_t original = getpid();
+for (int i = 0; i < tamanho; ++i) {
+    pid_t pid = fork();
+    if (pid == -1) { /* tratamento de falha */ }
+    if (pid == 0) v[i] = i + 5;
+}
+\end{lstlisting}
+
+\vspace{0.5em}
+\begin{alertblock}{Dois minutos, no papel}
+Com \texttt{tamanho = 3}, quantos processos existem ao todo? Desenhe quem cria quem.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{A árvore de \texttt{fork2.c}}
+\begin{columns}[c]
+\column{0.62\textwidth}
+\begin{tikzpicture}[x=1.3cm, y=1.05cm]
+    \node[destaque] (p0) at (0,0) {original};
+    \node[procf] (a) at (2,0) {A};
+    \node[procf] (c) at (3.5,0) {C};
+    \node[procf] (g) at (5,0) {G};
+    \node[procf] (e) at (3.5,-1) {E};
+    \node[procf] (b) at (2,-2) {B};
+    \node[procf] (f) at (3.5,-2) {F};
+    \node[procf] (d) at (2,-3) {D};
+    \draw[seta] (p0) -- node[rotulo, above] {i=0} (a);
+    \draw[seta] (a) -- node[rotulo, above] {i=1} (c);
+    \draw[seta] (c) -- node[rotulo, above] {i=2} (g);
+    \draw[seta] (a.south) |- node[rotulo, pos=0.75, above] {i=2} (e.west);
+    \draw[seta] (p0.south) |- node[rotulo, pos=0.8, above] {i=1} (b.west);
+    \draw[seta] (b) -- node[rotulo, above] {i=2} (f);
+    \draw[seta] (p0.south) ++(-0.3,0) |- node[rotulo, pos=0.8, above] {i=2} (d.west);
+\end{tikzpicture}
+
+\column{0.36\textwidth}
+\textbf{Caminhos ao fim de cada iteração}
+\begin{itemize}
+    \item início: \textbf{1}
+    \pause
+    \item \texttt{i=0}: \textbf{2}
+    \pause
+    \item \texttt{i=1}: \textbf{4}
+    \pause
+    \item \texttt{i=2}: \textbf{8}
+\end{itemize}
+\pause
+\small Todos continuam o laço: \textbf{8 processos} ao todo, \textbf{7 novos}, $1+2+4=7$ chamadas executadas.
+\end{columns}
+\end{frame}
+
+\begin{frame}{Dois cuidados com essa contagem}
+\begin{itemize}
+    \item \textbf{8} conta os processos criados \emph{ao longo da execução}.\\
+    Não significa que os oito estejam vivos ao mesmo tempo.
+    \item O código tem \textbf{uma} chamada de \texttt{fork()}; a árvore executa \textbf{sete}.
+\end{itemize}
+
+\vspace{1em}
+\textbf{E se cada filho saísse do laço logo após nascer?}
+
+\pause
+\begin{exampleblock}{Resposta}
+Só o original completaria as três iterações: \textbf{4 processos} ao todo (o original e três filhos).
+\end{exampleblock}
+\end{frame}
+
+% ============================================================
+\section{Memória independente}
+% ============================================================
+
+\begin{frame}[fragile]{Previsão antes de executar}
+Cada filho escreve em \texttt{v[i]}. O pai soma o vetor no final.
+
+\begin{center}
+{\large Qual soma o pai imprime? \quad \textbf{0}? \quad \textbf{18}? \quad outro valor?}
+\end{center}
+
+\pause
+\begin{lstlisting}[style=terminal]
+$ make run-fork
+./build/fork2
+Soma total no pai: 0
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Cada processo escreve na própria cópia}
+\begin{center}
+\begin{tikzpicture}
+    \node[font=\small\bfseries, anchor=east] at (-0.2,1.6) {Pai antes};
+    \foreach \x in {0,1,2} \node[celula] at (\x*0.75+0.4,1.6) {0};
+    \draw[seta] (2.4,1.6) -- node[rotulo, above] {fork} (4.2,2.4);
+    \draw[seta] (2.4,1.6) -- (4.2,0.8);
+
+    \node[font=\small\bfseries, anchor=west] at (4.3,2.4) {Filho};
+    \node[celula, fill=mLightBrown!25] at (6.0,2.4) {5};
+    \node[celula] at (6.75,2.4) {0};
+    \node[celula] at (7.5,2.4) {0};
+    \node[font=\scriptsize, anchor=west] at (8.0,2.4) {\texttt{v[0] = 0 + 5}};
+
+    \node[font=\small\bfseries, anchor=west] at (4.3,0.8) {Pai};
+    \foreach \x in {0,1,2} \node[celula] at (\x*0.75+6.0,0.8) {0};
+    \node[font=\scriptsize, anchor=west] at (8.0,0.8) {não entra em \texttt{pid == 0}};
+\end{tikzpicture}
+\end{center}
+
+\begin{itemize}
+    \item \texttt{calloc} começa com três zeros.
+    \item O filho altera a \textbf{sua} memória; o vetor do pai continua \texttt{[0, 0, 0]}.
+    \item \texttt{getpid() == original}: só o processo original imprime a soma.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{\texttt{waitpid}: esperar não é comunicar}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{O que \texttt{waitpid} faz}
+\begin{itemize}
+    \item Espera um filho terminar.
+    \item Coleta o estado de término.
+    \item Cada processo coleta seus \textbf{filhos diretos}.
+\end{itemize}
+
+\column{0.5\textwidth}
+\textbf{O que ele não faz}
+\begin{itemize}
+    \item Não copia o vetor do filho.
+    \item Não cria memória compartilhada.
+    \item Não transporta resultados.
+\end{itemize}
+\end{columns}
+
+\vspace{1em}
+\begin{alertblock}{Por que a soma não virou 18?}
+O pai já espera os filhos, mas esperar coordena o \emph{término}. Nem \texttt{sleep} nem \texttt{waitpid} tornam o heap compartilhado.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Checagem em duplas \hfill \normalsize 5 minutos}
+\begin{enumerate}
+    \item Quantos processos são criados ao todo, incluindo o original? Desenhe a evolução por iteração.
+    \item Quais retornos de \texttt{fork()} identificam filho, pai e falha? De onde cada um continua?
+    \item O filho altera \texttt{v[i]}. Qual soma o pai imprime? Explique.
+    \item O pai espera os filhos. Isso faz o vetor dele receber as escritas dos filhos?
+\end{enumerate}
+
+\vspace{0.6em}
+\centering \emph{Vamos ouvir uma dupla sobre a árvore e outra sobre a espera.}
+\end{frame}
+
+% ============================================================
+\section{Pipe: comunicação explícita}
+% ============================================================
+
+\begin{frame}{Se a memória não leva o resultado\ldots}
+\begin{center}
+{\large \ldots o filho precisa \textbf{enviar os dados explicitamente}.}
+\end{center}
+
+\vspace{0.4em}
+\textbf{IPC} (\emph{Inter-Process Communication}): mecanismos do SO para processos trocarem dados.
+
+\vspace{0.6em}
+\begin{center}
+\begin{tikzpicture}
+    \node[proc] (filho) {Filho\\\scriptsize calcula 30};
+    \node[draw=mLightBrown, fill=mLightBrown!12, thick, minimum width=3cm, minimum height=0.8cm,
+          right=2.8cm of filho, font=\small] (pipe) {pipe};
+    \node[proc, right=2.8cm of pipe] (pai) {Pai\\\scriptsize recebe 30};
+    \draw[setad] (filho) -- node[rotulo, above=2pt] {\texttt{write(fd[1])}} (pipe);
+    \draw[setad] (pipe) -- node[rotulo, above=2pt] {\texttt{read(fd[0])}} (pai);
+    \node[below=0.15cm of filho, font=\scriptsize] {fecha \texttt{fd[0]}};
+    \node[below=0.15cm of pai, font=\scriptsize] {fecha \texttt{fd[1]}};
+    \begin{scope}[on background layer]
+        \node[draw=black!40, dashed, rounded corners, fit=(pipe), inner sep=0.35cm,
+              label={[font=\scriptsize, text=black!60]below:mantido pelo núcleo do SO}] {};
+    \end{scope}
+\end{tikzpicture}
+\end{center}
+\end{frame}
+
+\begin{frame}{Pontas, descritores e herança}
+\begin{itemize}
+    \item \texttt{pipe(fd)} cria o canal: \texttt{fd[0]} é a ponta de \textbf{leitura}, \texttt{fd[1]} a de \textbf{escrita}.
+    \item \textbf{Descritor}: número que identifica um recurso aberto pelo processo.
+    \item O pipe é criado \textbf{antes} do \texttt{fork()}: pai e filho herdam descritores que referenciam o mesmo canal.
+    \item Cada processo fecha a ponta que não usa.
+\end{itemize}
+
+\vspace{0.6em}
+\begin{alertblock}{Ordem que importa}
+\texttt{pipe()} $\rightarrow$ \texttt{fork()} $\rightarrow$ cada um fecha uma ponta $\rightarrow$ \texttt{write} / \texttt{read} $\rightarrow$ \texttt{waitpid}
+\end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{O exemplo pequeno: \texttt{pipe\_soma.c}}
+\begin{lstlisting}[style=codigo]
+if (pid == 0) {                                   /* filho */
+    close(fd[0]);
+    valor = 10 + 20;
+    int resultado = transferir(fd[1], &valor, sizeof valor, 1);
+    close(fd[1]);
+    _exit(resultado == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
+}
+close(fd[1]);                                     /* pai */
+int resultado = transferir(fd[0], &valor, sizeof valor, 0);
+close(fd[0]);
+\end{lstlisting}
+
+\small \texttt{transferir} chama \texttt{write} (modo 1) ou \texttt{read} (modo 0) até mover todos os bytes.
+\end{frame}
+
+\begin{frame}{O mesmo \texttt{\&valor}, duas variáveis}
+\begin{itemize}
+    \item \texttt{\&valor} no filho e \texttt{\&valor} no pai apontam para variáveis \textbf{locais de cada processo}.
+    \item O SO \textbf{copia os bytes} pelo canal.
+    \item O ponteiro não torna as duas variáveis compartilhadas: o endereço é interpretado dentro do espaço de cada processo.
+\end{itemize}
+
+\vspace{0.6em}
+\begin{exampleblock}{Pipe é fluxo de bytes}
+Nem toda chamada de \texttt{read} recebe tudo que pedimos. O \emph{helper} \texttt{transferir} repete a operação e trata interrupções (\texttt{EINTR}).
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}{E se o pai chegar ao \texttt{read} primeiro?}
+\begin{center}
+\begin{tabular}{@{}p{6.2cm}p{6.2cm}@{}}
+\toprule
+\textbf{Situação do pipe} & \textbf{O que \texttt{read} faz} \\
+\midrule
+Vazio, com ponta de escrita aberta & Bloqueia e espera dados \\
+Com dados disponíveis & Retorna os bytes (talvez menos que o pedido) \\
+Vazio, todas as escritas fechadas & Retorna \texttt{0}: \textbf{EOF} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.8em}
+\begin{alertblock}{Por isso fechamos pontas}
+Enquanto houver \emph{qualquer} ponta de escrita aberta, inclusive uma cópia herdada esquecida, um pipe vazio não sinaliza EOF.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{Executando o exemplo}
+\begin{lstlisting}[style=terminal]
+$ make run-pipe-soma
+./build/pipe-soma
+Resultado recebido: 30
+\end{lstlisting}
+
+\vspace{0.6em}
+\begin{itemize}
+    \item O \texttt{30} foi calculado no filho.
+    \item Chegou ao pai pelo canal, não por memória comum.
+\end{itemize}
+\end{frame}
+
+% ============================================================
+\section{Vários processos: pipe2.c}
+% ============================================================
+
+\begin{frame}{\texttt{pipe2.c}: quem cria quem}
+\begin{center}
+\begin{tikzpicture}[node distance=0.6cm and 1.2cm]
+    \node[destaque] (pai) {Pai original};
+    \node[proc, below left=1cm and 1.2cm of pai] (calc) {Calculador\\\scriptsize\texttt{son1}};
+    \node[proc, below right=1cm and 1.2cm of pai] (coord) {Coordenador\\\scriptsize\texttt{son5}};
+    \node[procf, minimum width=2cm, below=1cm of coord] (f2) {fornece \texttt{2a}};
+    \node[procf, minimum width=2cm, left=0.4cm of f2] (f1) {fornece \texttt{-b}};
+    \node[procf, minimum width=2cm, right=0.4cm of f2] (f3) {fornece \texttt{delta}};
+    \draw[seta] (pai) -- (calc);
+    \draw[seta] (pai) -- (coord);
+    \draw[seta] (coord) -- (f1);
+    \draw[seta] (coord) -- (f2);
+    \draw[seta] (coord) -- (f3);
+\end{tikzpicture}
+\end{center}
+
+\vspace{0.3em}
+\centering \textbf{Seis processos} e \textbf{cinco pipes}. A entrada é lida no pai antes dos \texttt{fork()}.
+\end{frame}
+
+\begin{frame}{\texttt{pipe2.c}: por onde os dados passam}
+\begin{center}
+\begin{tikzpicture}[node distance=0.35cm]
+    \node[procf, minimum width=2.1cm] (f1) {\texttt{-b}};
+    \node[procf, minimum width=2.1cm, below=of f1] (f2) {\texttt{2a}};
+    \node[procf, minimum width=2.1cm, below=of f2] (f3) {\texttt{delta}};
+    \node[proc, right=3.2cm of f2, minimum height=1.6cm] (calc) {Calculador};
+    \node[destaque, right=3.2cm of calc] (pai) {Pai};
+    \draw[setad] (f1.east) -- node[rotulo, above, sloped] {\texttt{canais[0]}} (calc.west);
+    \draw[setad] (f2.east) -- node[rotulo, above] {\texttt{canais[1]}} (calc.west);
+    \draw[setad] (f3.east) -- node[rotulo, below, sloped] {\texttt{canais[2]}} (calc.west);
+    \draw[setad] ([yshift=0.25cm]calc.east) -- node[rotulo, above] {\texttt{canais[3]}: x1} ([yshift=0.25cm]pai.west);
+    \draw[setad] ([yshift=-0.25cm]calc.east) -- node[rotulo, below] {\texttt{canais[4]}: x2} ([yshift=-0.25cm]pai.west);
+\end{tikzpicture}
+\end{center}
+
+\vspace{0.3em}
+\begin{alertblock}{Árvore de criação $\neq$ fluxo de dados}
+Os fornecedores são filhos do coordenador, mas enviam ao calculador. Quem escreve e quem lê cada canal?
+\end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{Executando \texttt{pipe2.c}}
+\begin{lstlisting}[style=terminal]
+$ make run-pipe
+Digite a, b e delta (delta ja calculado): 1 -3 1
+Raizes: x1 = 1; x2 = 2
+\end{lstlisting}
+
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Entrada:} \texttt{a}, \texttt{b} e \texttt{delta}.\\
+O programa \textbf{não} pede \texttt{c}.
+
+\column{0.5\textwidth}
+$-b = 3, \quad 2a = 2, \quad \sqrt{\Delta} = 1$\\[0.3em]
+$x_1 = \frac{3-1}{2} = 1, \quad x_2 = \frac{3+1}{2} = 2$
+\end{columns}
+
+\vspace{0.6em}
+\small O exemplo ilustra IPC; não foi feito para acelerar um cálculo tão pequeno.
+\end{frame}
+
+% ============================================================
+\section{Prática}
+% ============================================================
+
+\begin{frame}[fragile]{Seis lacunas: \texttt{pipe\_soma\_atividade.c}}
+\begin{lstlisting}[style=codigo]
+if (pid == 0) {
+    close(@/* 1: ponta que o filho nao usa */@);
+    valor = @/* 2: calculo */@;
+    int resultado = @/* 3: enviar valor pelo helper transferir */@;
+    close(fd[1]);
+    _exit(resultado == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
+}
+close(@/* 4: ponta que o pai nao usa */@);
+int resultado = @/* 5: receber valor pelo helper transferir */@;
+close(@/* 6: ponta usada pelo pai */@);
+\end{lstlisting}
+
+\small \texttt{transferir(descritor, endereço, bytes, modo)} — modo \texttt{1} envia, \texttt{0} recebe.
+\end{frame}
+
+\begin{frame}[fragile]{Compilar e conferir}
+\begin{lstlisting}[style=terminal]
+$ gcc -std=c11 -Wall -Wextra -Wpedantic -Werror \
+      examples/dia05/pipe_soma_atividade.c -o /tmp/pipe-soma-aluno
+$ /tmp/pipe-soma-aluno
+Resultado recebido: 30
+\end{lstlisting}
+
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Em duplas, 7 minutos}
+\begin{itemize}
+    \item Antes de preencher, o esqueleto não compila.
+    \item Cada pessoa explica uma ponta do canal.
+\end{itemize}
+
+\column{0.5\textwidth}
+\textbf{Responda também}
+\begin{enumerate}
+    \setcounter{enumi}{4}
+    \item Por que criar o pipe antes do \texttt{fork()}?
+    \item \texttt{read} antes do \texttt{write}: erro, espera ou EOF?
+    \item Por que cada um fecha uma ponta diferente?
+\end{enumerate}
+\end{columns}
+\end{frame}
+
+% ============================================================
+\section{Fechamento}
+% ============================================================
+
+\begin{frame}{Síntese}
+\begin{center}
+\begin{tabular}{@{}lp{9.5cm}@{}}
+\toprule
+\texttt{fork()}    & Cria um processo com memória \textbf{independente}. \\
+\texttt{waitpid()} & Coordena o \textbf{término} e coleta o filho. \\
+\texttt{pipe()}    & \textbf{Transporta dados} entre processos. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.8em}
+\begin{exampleblock}{Próxima aula: 7/10}
+Threads \textbf{compartilham} memória. O problema muda: como controlar o acesso a ela?
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}{Bilhete de saída}
+\begin{center}
+{\large \textbf{Individual, em duas ou três frases:}}
+
+\vspace{1em}
+{\Large Por que \texttt{waitpid} não resolve a comunicação\\[0.2em] do resultado e \texttt{pipe} resolve?}
+\end{center}
+\end{frame}
+
+\begin{frame}{Obrigado!}
+\centering
+{\Large Dúvidas?}
+\vspace{2em}
+
+Weslei Ferreira Santos\\
+MATA58 · Sistemas Operacionais\\
+Instituto de Computação / UFBA
+
+\vspace{1.5em}
+{\scriptsize Material-base: Prof. Maycon Leone M. Peixoto}
+\end{frame}
+
+\end{document}

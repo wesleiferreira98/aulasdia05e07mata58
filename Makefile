@@ -63,3 +63,13 @@ $(BUILD)/pipe-soma: examples/dia05/pipe_soma.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
 run-pipe-soma: $(BUILD)/pipe-soma
 	./$(BUILD)/pipe-soma
+
+.PHONY: run-fork-basico run-memoria
+$(BUILD)/fork-basico: examples/dia05/fork_basico.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
+$(BUILD)/memoria-independente: examples/dia05/memoria_independente.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
+run-fork-basico: $(BUILD)/fork-basico
+	./$(BUILD)/fork-basico
+run-memoria: $(BUILD)/memoria-independente
+	./$(BUILD)/memoria-independente

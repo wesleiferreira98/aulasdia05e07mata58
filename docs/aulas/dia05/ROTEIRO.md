@@ -17,7 +17,7 @@ make build/pipe-soma
 
 Deixe abertos `fork2.c`, `pipe2.c` e o [exemplo pequeno resolvido](../../../examples/dia05/pipe_soma.c). Prepare dois terminais: um para código, outro para execução. As saídas de fork2 e do pipe pequeno são determinísticas; os PIDs que o SO atribui não são.
 
-Distribua [ATIVIDADE.md](ATIVIDADE.md) sem o [gabarito](GABARITO.md). O esqueleto da prática está em [pipe_soma_atividade.c](../../../examples/dia05/pipe_soma_atividade.c).
+Para estudo antes ou depois da aula, indique a [apostila](apostila/apostila05_processos_ipc.pdf); ela não traz as respostas das seis lacunas. Distribua [ATIVIDADE.md](ATIVIDADE.md) sem o [gabarito](GABARITO.md). O esqueleto da prática está em [pipe_soma_atividade.c](../../../examples/dia05/pipe_soma_atividade.c).
 
 **Prioridade:** fork → memória independente → IPC. O exemplo grande de Bhaskara é uma aplicação para leitura guiada; não exige estudar cada função auxiliar. A simulação Java de produtor-consumidor fica para o dia 7.
 
@@ -237,7 +237,7 @@ Fala final sugerida: “fork cria processos com memórias independentes. waitpid
 
 ## Sequência para projetar — dez telas
 
-Use estes tópicos como ordem do material no projetor; não é necessário abrir tudo de uma vez.
+Use estes tópicos como ordem do material no projetor; não é necessário abrir tudo de uma vez. Os slides prontos seguem essa ordem: [aula05_processos_ipc.pdf](slides/aula05_processos_ipc.pdf), com fonte em [aula05_processos_ipc.tex](slides/aula05_processos_ipc.tex) (Beamer, tema metropolis).
 
 1. Pergunta central e objetivos.
 2. Programa → duas instâncias com PIDs diferentes.

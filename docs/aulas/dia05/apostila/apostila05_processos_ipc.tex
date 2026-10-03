@@ -1,0 +1,1041 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{microtype}
+\usepackage{needspace}
+\usepackage{etoolbox}
+\usepackage[a4paper, margin=2.4cm, headheight=14pt]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{amsmath, amssymb}
+\usepackage[explicit]{titlesec}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage[most]{tcolorbox}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, fit, backgrounds}
+\usepackage[hidelinks]{hyperref}
+
+% ------------------------------------------------------------
+% Cores do tema metropolis, as mesmas dos slides
+% ------------------------------------------------------------
+\definecolor{mDarkTeal}{HTML}{23373B}
+\definecolor{mLightBrown}{HTML}{EB811B}
+\definecolor{mLightGreen}{HTML}{14B03D}
+\definecolor{mBackground}{HTML}{FAFAFA}
+\definecolor{termbg}{RGB}{40,44,52}
+\definecolor{termfg}{RGB}{220,220,220}
+\definecolor{codekw}{RGB}{235,129,27}
+\definecolor{codecom}{RGB}{140,150,160}
+\definecolor{codestr}{RGB}{152,195,121}
+
+\hypersetup{pdftitle={Processos e comunicação entre processos}, pdfauthor={Weslei Ferreira Santos}}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\setlist{itemsep=0.2em, topsep=0.3em}
+\setlist[itemize]{label=\textcolor{mDarkTeal}{\small$\blacktriangleright$}}
+
+% ------------------------------------------------------------
+% Títulos no estilo dos slides
+% ------------------------------------------------------------
+\newcommand{\barradesecao}[1]{%
+  \begin{tcolorbox}[colback=mDarkTeal, colframe=mDarkTeal, sharp corners, boxrule=0pt,
+      left=10pt, right=10pt, top=7pt, bottom=7pt, coltext=white, fontupper=\Large\bfseries]
+  \thesection\quad #1
+  \end{tcolorbox}}
+\titleformat{\section}[block]{}{}{0pt}{\barradesecao{#1}}
+\titleformat{name=\section, numberless}[block]{}{}{0pt}{%
+  \begin{tcolorbox}[colback=mDarkTeal, colframe=mDarkTeal, sharp corners, boxrule=0pt,
+      left=10pt, right=10pt, top=7pt, bottom=7pt, coltext=white, fontupper=\Large\bfseries]
+  #1
+  \end{tcolorbox}}
+\titlespacing*{\section}{0pt}{1.2em}{0.6em}
+
+\titleformat{\subsection}[block]{\large\bfseries\color{mDarkTeal}}{}{0pt}%
+  {\thesubsection\quad #1}[\vspace{-\parskip}\vspace{3pt}{\color{mLightBrown}\rule{3.2cm}{1.4pt}}]
+\titleformat{name=\subsection, numberless}[block]{\large\bfseries\color{mDarkTeal}}{}{0pt}%
+  {#1}[\vspace{-\parskip}\vspace{3pt}{\color{mLightBrown}\rule{3.2cm}{1.4pt}}]
+\titlespacing*{\subsection}{0pt}{1.1em}{0.4em}
+\pretocmd{\subsection}{\needspace{6\baselineskip}}{}{\PackageWarning{apostila}{pretocmd falhou}}
+\pretocmd{\section}{\needspace{10\baselineskip}}{}{\PackageWarning{apostila}{pretocmd falhou}}
+
+\titleformat{\subsubsection}[runin]{\bfseries\color{mDarkTeal}}{}{0pt}{#1.}
+\titlespacing*{\subsubsection}{0pt}{0.8em}{0.6em}
+
+% ------------------------------------------------------------
+% Cabeçalho e rodapé
+% ------------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{mDarkTeal} MATA58 · Sistemas Operacionais}
+\fancyhead[R]{\small\color{mDarkTeal} Processos e comunicação entre processos}
+\fancyfoot[R]{\small\color{mDarkTeal}\thepage/\pageref{LastPage}}
+\renewcommand{\headrule}{\color{mLightBrown}\hrule height 0.8pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% ------------------------------------------------------------
+% Blocos no estilo "block=fill" do metropolis
+% ------------------------------------------------------------
+\tcbset{
+  bloco/.style={enhanced, breakable, sharp corners, boxrule=0pt, frame hidden,
+    colback=black!4, colbacktitle=black!11, fonttitle=\bfseries,
+    left=8pt, right=8pt, top=5pt, bottom=6pt, toptitle=3pt, bottomtitle=3pt,
+    before skip=0.9em, after skip=0.9em}
+}
+\newtcolorbox{definicao}[1][Definição]{bloco, coltitle=mDarkTeal, title={#1}}
+\newtcolorbox{alerta}[1][Atenção]{bloco, coltitle=mLightBrown, title={#1}}
+\newtcolorbox{exemplo}[1][Exemplo]{bloco, coltitle=mLightGreen!80!black, title={#1}}
+\newtcolorbox{pergunta}[1][Pare e pense]{bloco, colback=mLightBrown!7, colbacktitle=mLightBrown!20,
+  coltitle=mLightBrown!70!black, title={#1}}
+
+% ------------------------------------------------------------
+% Código e terminal, iguais aos slides
+% ------------------------------------------------------------
+\lstdefinestyle{terminal}{
+    backgroundcolor=\color{termbg},
+    basicstyle=\ttfamily\small\color{termfg},
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{termbg},
+    framerule=3pt,
+    xleftmargin=4pt,
+    xrightmargin=4pt,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    aboveskip=0.8em,
+    belowskip=0.8em
+}
+\lstdefinestyle{codigo}{
+    style=terminal,
+    language=C,
+    basicstyle=\ttfamily\footnotesize\color{termfg},
+    keywordstyle=\color{codekw}\bfseries,
+    commentstyle=\color{codecom}\itshape,
+    stringstyle=\color{codestr},
+    morekeywords={pid_t, size_t, ssize_t},
+    moredelim=[is][\color{codekw}\bfseries]{@}{@}
+}
+\lstdefinestyle{arquivo}{
+    style=codigo,
+    numbers=left,
+    numberstyle=\tiny\color{codecom},
+    numbersep=8pt,
+    xleftmargin=22pt,
+    framexleftmargin=18pt
+}
+
+% ------------------------------------------------------------
+% Figuras
+% ------------------------------------------------------------
+\tikzset{
+    proc/.style={draw=mDarkTeal, fill=mDarkTeal!8, rounded corners=3pt, thick,
+        minimum width=2.1cm, minimum height=0.8cm, align=center, font=\small},
+    procf/.style={proc, draw=mDarkTeal!70, fill=white, minimum width=1.2cm, font=\footnotesize},
+    destaque/.style={proc, draw=mLightBrown, fill=mLightBrown!12},
+    arquivo/.style={draw=black!50, fill=black!5, thick, minimum width=2.2cm,
+        minimum height=1.1cm, align=center, font=\small},
+    seta/.style={-{Stealth[length=2.2mm]}, thick, draw=mDarkTeal},
+    setad/.style={-{Stealth[length=2.2mm]}, very thick, draw=mLightBrown},
+    rotulo/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
+    celula/.style={draw=mDarkTeal, minimum size=0.7cm, font=\ttfamily\small, fill=white},
+    regiao/.style={draw=mDarkTeal, fill=mDarkTeal!6, minimum width=3.6cm, minimum height=0.75cm,
+        font=\small, align=center}
+}
+
+\newcommand{\raiz}{../../../..}
+\newcommand{\cmd}[1]{\texttt{#1}}
+
+\begin{document}
+
+% ============================================================
+% Capa no estilo da página de título dos slides
+% ============================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\vspace*{5cm}
+{\color{mDarkTeal}\fontsize{28}{34}\selectfont\bfseries Processos e comunicação\\[0.2em] entre processos\par}
+\vspace{0.8em}
+{\Large\color{mDarkTeal!80} fork, memória independente e pipe na prática\par}
+\vspace{1em}
+{\color{mLightBrown}\rule{\linewidth}{1.2pt}}
+\vspace{1em}
+
+{\large Apostila da aula de 5 de outubro de 2026\par}
+\vspace{3em}
+{\large Weslei Ferreira Santos\par}
+\vspace{0.6em}
+MATA58 · Sistemas Operacionais\\
+Instituto de Computação / UFBA
+
+\vfill
+{\small\color{black!60} Material-base: Prof. Maycon Leone M. Peixoto. Os programas citados estão no repositório da disciplina e podem ser compilados com \cmd{make}.\par}
+\end{titlepage}
+
+\tableofcontents
+\clearpage
+
+% ============================================================
+\section{Antes de começar}
+% ============================================================
+
+Esta apostila acompanha a aula sobre processos e comunicação entre processos. Os slides mostram o caminho em poucas palavras; aqui cada ideia aparece com mais calma, com os programas completos, as saídas esperadas e os detalhes que costumam gerar dúvida.
+
+A aula inteira gira em torno de uma pergunta:
+
+\begin{center}
+{\large\bfseries\color{mDarkTeal} Como um processo recebe o resultado calculado por outro?}
+\end{center}
+
+Para respondê-la, seguimos uma ordem deliberada. Primeiro entendemos o que é um processo e como ele nasce com \cmd{fork()}. Depois constatamos, com um experimento, que pai e filho \emph{não} compartilham a memória. Só então faz sentido apresentar o \cmd{pipe}, o mecanismo que o sistema operacional oferece para transportar dados de um processo a outro.
+
+\subsection{O que você deve conseguir ao final}
+
+\begin{itemize}
+    \item Identificar os valores que \cmd{fork()} devolve ao pai e ao filho e explicar de onde cada um continua a execução.
+    \item Explicar por que uma variável alterada no filho não muda no pai.
+    \item Desenhar a árvore de processos criada por um laço que chama \cmd{fork()}.
+    \item Diferenciar \emph{esperar o término} de um filho (\cmd{waitpid}) de \emph{receber dados} dele (\cmd{pipe}).
+    \item Completar um programa em que o filho envia um inteiro ao pai por um pipe.
+\end{itemize}
+
+\subsection{Como usar os exemplos}
+
+Todos os programas citados ficam no repositório da disciplina. Em um terminal Linux, na raiz do repositório:
+
+\begin{lstlisting}[style=terminal]
+$ make test            # compila os exemplos e confere o comportamento
+$ make run-fork-basico # retornos de fork
+$ make run-memoria     # mesmo endereco, valores diferentes
+$ make run-fork        # fork2.c
+$ make run-pipe-soma   # filho envia 30 ao pai
+$ make run-pipe        # pipe2.c: raizes da equacao de 2o grau
+\end{lstlisting}
+
+Os exemplos são compilados com \cmd{-std=c11 -Wall -Wextra -Wpedantic -Werror}: qualquer aviso do compilador é tratado como erro. Rode cada programa enquanto lê a seção correspondente. Os números de PID das saídas mostradas aqui vão ser diferentes na sua máquina, e isso é esperado.
+
+% ============================================================
+\section{Programa e processo}
+% ============================================================
+
+\subsection{Duas palavras que parecem sinônimas}
+
+Um \textbf{programa} é um arquivo: uma sequência de instruções e dados guardada no disco. Ele não faz nada sozinho. Quando pedimos ao sistema operacional para executá-lo, o SO cria um \textbf{processo}.
+
+\begin{definicao}
+Um \textbf{processo} é um programa em execução, junto com todo o estado necessário para executá-lo: o identificador (PID), o conteúdo dos registradores, a memória (código, dados, heap e pilha), os arquivos abertos e outras informações mantidas pelo núcleo do SO.
+\end{definicao}
+
+A diferença fica clara quando executamos o mesmo programa duas vezes, em dois terminais. Há um único arquivo e dois processos. Cada um tem o seu PID, a sua pilha, o seu heap e os seus registradores.
+
+\begin{center}
+\begin{tikzpicture}
+    \node[arquivo] (prog) {\texttt{fork2}\\\scriptsize arquivo no disco};
+    \node[proc, right=3cm of prog, yshift=0.75cm] (p1) {Processo\\\scriptsize PID 4210};
+    \node[proc, right=3cm of prog, yshift=-0.75cm] (p2) {Processo\\\scriptsize PID 4231};
+    \draw[seta] (prog.east) -- node[rotulo, above, sloped] {executa} (p1.west);
+    \draw[seta] (prog.east) -- node[rotulo, below, sloped] {executa} (p2.west);
+    \node[right=0.4cm of p1, font=\scriptsize, align=left] {pilha, heap,\\registradores};
+    \node[right=0.4cm of p2, font=\scriptsize, align=left] {pilha, heap,\\registradores};
+\end{tikzpicture}
+
+{\small Os PIDs da figura são ilustrativos.}
+\end{center}
+
+\subsection{O que o SO guarda sobre cada processo}
+
+Para cada processo, o núcleo mantém um registro (frequentemente chamado de \emph{bloco de controle do processo}, ou PCB). Entre as informações guardadas estão:
+
+\begin{itemize}
+    \item \textbf{PID}: o número que identifica o processo enquanto ele existe.
+    \item \textbf{PPID}: o PID do processo que o criou (o pai).
+    \item \textbf{Estado}: executando, pronto, bloqueado esperando algo, terminado.
+    \item \textbf{Contexto}: o valor dos registradores, incluindo o contador de programa, salvo quando o processo sai da CPU.
+    \item \textbf{Espaço de endereçamento}: a memória que o processo enxerga.
+    \item \textbf{Tabela de descritores}: os arquivos, pipes e terminais que o processo tem abertos.
+\end{itemize}
+
+No Linux, essas informações aparecem em comandos como \cmd{ps -f} e \cmd{pstree -p}, vistos na aula de introdução ao Linux.
+
+\subsection{O espaço de endereçamento}
+
+Cada processo enxerga a sua memória como se fosse a única do computador. Essa memória está organizada em regiões:
+
+\begin{center}
+\begin{tikzpicture}[node distance=0pt]
+    \node[regiao] (pilha) {pilha};
+    \node[regiao, below=of pilha, fill=white, minimum height=1.1cm] (livre) {\scriptsize $\downarrow$ \quad espaço livre \quad $\uparrow$};
+    \node[regiao, below=of livre] (heap) {heap};
+    \node[regiao, below=of heap] (dados) {dados globais};
+    \node[regiao, below=of dados] (texto) {código (texto)};
+    \node[right=0.5cm of pilha, font=\footnotesize, align=left] {variáveis locais e chamadas de função};
+    \node[right=0.5cm of heap, font=\footnotesize, align=left] {\texttt{malloc}, \texttt{calloc}};
+    \node[right=0.5cm of dados, font=\footnotesize, align=left] {variáveis globais e \texttt{static}};
+    \node[right=0.5cm of texto, font=\footnotesize, align=left] {instruções do programa};
+    \node[left=0.3cm of pilha, font=\scriptsize, color=black!60] {endereços altos};
+    \node[left=0.3cm of texto, font=\scriptsize, color=black!60] {endereços baixos};
+\end{tikzpicture}
+\end{center}
+
+Os endereços que o programa usa são \textbf{virtuais}: o hardware e o SO traduzem cada endereço virtual para uma posição física da memória, e essa tradução é diferente para cada processo. Esse detalhe vai explicar, na Seção~\ref{sec:memoria}, por que o mesmo endereço pode guardar valores diferentes em dois processos.
+
+\begin{pergunta}
+Se uma execução de um programa altera uma variável, a outra execução, em outro terminal, necessariamente observa a alteração? Anote sua resposta. Vamos testá-la nas próximas seções.
+\end{pergunta}
+
+% ============================================================
+\section{Criando processos com fork()}
+% ============================================================
+
+\subsection{Uma chamada, dois retornos}
+
+No Linux e em outros sistemas Unix, um processo cria outro com a chamada de sistema \cmd{fork()}. Ela duplica o processo que a chamou: o original passa a ser o \textbf{pai} e a cópia é o \textbf{filho}.
+
+\begin{lstlisting}[style=codigo]
+#include <unistd.h>
+
+pid_t fork(void);
+\end{lstlisting}
+
+O aspecto mais estranho de \cmd{fork()} é que ela é chamada uma vez e \textbf{retorna duas vezes}: uma no pai e outra no filho. O valor de retorno é o que permite a cada processo saber quem ele é.
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Onde} & \textbf{Valor devolvido} & \textbf{Significado} \\
+\midrule
+No filho & \cmd{0} & ``Eu sou o filho.'' \\
+No pai & PID do filho (positivo) & ``Criei este filho.'' \\
+No pai, em caso de falha & \cmd{-1} & Nenhum filho foi criado; \cmd{errno} diz o motivo. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Por isso o código que usa \cmd{fork()} quase sempre tem a mesma forma:
+
+\begin{lstlisting}[style=codigo]
+pid_t pid = fork();
+if (pid == -1) {
+    /* falha: nenhum filho foi criado nesta chamada */
+} else if (pid == 0) {
+    /* este caminho executa no filho */
+} else {
+    /* este caminho executa no pai; pid identifica o filho */
+}
+/* pai e filho podem chegar aqui */
+\end{lstlisting}
+
+\begin{alerta}[O filho não recomeça o main]
+O filho é uma cópia do pai \emph{no ponto da chamada}. Ele não executa as linhas anteriores a \cmd{fork()}: continua logo depois dela, exatamente como o pai, só que recebendo \cmd{0} como retorno. Variáveis criadas antes da chamada já existem no filho, com os mesmos valores que tinham no pai naquele instante.
+\end{alerta}
+
+\subsection{O que o filho herda}
+
+Logo após um \cmd{fork()} bem-sucedido, o filho tem:
+
+\begin{itemize}
+    \item uma \textbf{cópia} de toda a memória do pai: código, variáveis globais, heap e pilha;
+    \item os mesmos valores nos registradores, inclusive o ponto do programa onde a execução continua;
+    \item cópias dos \textbf{descritores de arquivo} abertos, que apontam para os mesmos arquivos e pipes que os do pai (isso será essencial na Seção~\ref{sec:pipe});
+    \item um PID \textbf{novo} e, como PPID, o PID do pai.
+\end{itemize}
+
+Copiar toda a memória a cada \cmd{fork()} seria caro. O Linux usa a técnica de \textbf{cópia na escrita} (\emph{copy-on-write}): logo após a chamada, pai e filho apontam para as mesmas páginas físicas, marcadas como somente leitura. Quando um dos dois tenta escrever numa página, o SO faz uma cópia dela só para quem escreveu. Para o programador o efeito é o mesmo de uma cópia completa: \textbf{o que um escreve, o outro não vê}.
+
+\subsection{getpid() e getppid()}
+
+Duas chamadas simples ajudam a acompanhar quem é quem:
+
+\begin{itemize}
+    \item \cmd{getpid()} devolve o PID do processo que está executando a chamada;
+    \item \cmd{getppid()} devolve o PID do pai desse processo.
+\end{itemize}
+
+Note a diferença: no pai, o valor devolvido por \cmd{fork()} é o PID do \emph{filho}, e não o do próprio pai.
+
+\subsection{Um exemplo completo}
+
+O programa \cmd{examples/dia05/fork\_basico.c} mostra os dois retornos lado a lado:
+
+\lstinputlisting[style=arquivo]{\raiz/examples/dia05/fork_basico.c}
+
+Uma execução possível:
+
+\begin{lstlisting}[style=terminal]
+$ make run-fork-basico
+Antes do fork: PID 2020435
+Filho: fork retornou 0; meu PID 2020436; meu pai 2020435
+Pai: fork retornou 2020436; meu PID 2020435
+Pai: filho 2020436 terminou com codigo 0
+\end{lstlisting}
+
+Repare que o número devolvido ao pai (\cmd{2020436}) é o PID que o filho obtém com \cmd{getpid()}, e que o \cmd{getppid()} do filho é o PID do pai.
+
+\subsection{Quem executa primeiro?}
+
+Depois de \cmd{fork()}, pai e filho são dois processos independentes, disputando a CPU. O escalonador do SO decide quem roda, em que ordem e por quanto tempo. Em computadores com vários núcleos, os dois podem até rodar ao mesmo tempo.
+
+\begin{alerta}[Não conte com a ordem]
+Na saída acima, a linha do filho apareceu antes da linha do pai. Em outra execução a ordem pode se inverter. Um programa correto não pode depender disso: se a ordem importa, ela precisa ser imposta com sincronização, como \cmd{waitpid} ou um pipe.
+\end{alerta}
+
+\subsection{Um detalhe de C: buffers de saída}
+
+As funções de \cmd{stdio.h}, como \cmd{printf}, não escrevem diretamente no terminal. Elas acumulam o texto num \emph{buffer} na memória do processo e só o entregam ao SO quando o buffer enche, quando aparece uma quebra de linha (se a saída é um terminal) ou quando o programa termina normalmente.
+
+Esse buffer faz parte da memória e, portanto, é copiado pelo \cmd{fork()}. Duas consequências:
+
+\begin{enumerate}
+    \item Texto que ainda estava no buffer antes do \cmd{fork()} pode ser impresso \textbf{duas vezes}, uma por processo. É por isso que \cmd{fork\_basico.c} chama \cmd{fflush(stdout)} antes de \cmd{fork()}.
+    \item A função \cmd{\_exit} encerra o processo imediatamente, \textbf{sem} esvaziar esses buffers. Se o filho imprime algo e chama \cmd{\_exit}, precisa chamar \cmd{fflush(stdout)} antes, ou o texto pode se perder. Isso acontece de fato quando a saída é redirecionada para um arquivo ou para outro programa.
+\end{enumerate}
+
+Por que então o filho usa \cmd{\_exit} e não \cmd{exit}? Porque \cmd{exit} esvaziaria também os buffers \emph{herdados} do pai e executaria funções registradas pelo pai com \cmd{atexit}. Em um filho, \cmd{\_exit} encerra apenas o que é dele.
+
+% ============================================================
+\section{fork() dentro de um laço}
+% ============================================================
+
+\subsection{O programa fork2.c}
+
+O primeiro exemplo da aula coloca \cmd{fork()} dentro de um laço de três iterações. Cada processo filho escreve um valor no vetor \cmd{v}; no final, apenas o processo original soma o vetor e imprime o resultado.
+
+\lstinputlisting[style=arquivo]{\raiz/fork2.c}
+
+Alguns pontos do código antes da análise:
+
+\begin{itemize}
+    \item \cmd{calloc} reserva o vetor \textbf{já zerado}. A versão original usava \cmd{malloc}, que não inicializa a memória; a soma lia valores indeterminados.
+    \item \cmd{original} guarda o PID do processo que começou o programa. Todos os filhos herdam esse número, mas só um processo tem \cmd{getpid() == original}.
+    \item Depois do laço, cada processo espera \textbf{os seus próprios filhos} com \cmd{waitpid(-1, ...)} até receber \cmd{ECHILD}, que significa ``não há mais filhos para coletar''.
+\end{itemize}
+
+\subsection{Quantos processos existem?}
+
+O ponto central é que \textbf{os filhos também continuam o laço}. Um filho criado na iteração \cmd{i = 0} executa as iterações \cmd{i = 1} e \cmd{i = 2}, criando os seus próprios filhos.
+
+Vamos acompanhar iteração por iteração, supondo que todas as chamadas tenham sucesso. Chamaremos o processo inicial de \emph{original} e os demais de A a G.
+
+\begin{center}
+\begin{tabular}{@{}llc@{}}
+\toprule
+\textbf{Iteração} & \textbf{Quem chama fork() e quem nasce} & \textbf{Processos no total} \\
+\midrule
+antes do laço & apenas o original & 1 \\
+\cmd{i = 0} & original cria A & 2 \\
+\cmd{i = 1} & original cria B; A cria C & 4 \\
+\cmd{i = 2} & original cria D; A cria E; B cria F; C cria G & 8 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A árvore resultante, com o valor de \cmd{i} em que cada filho nasceu:
+
+\begin{center}
+\begin{tikzpicture}[x=1.5cm, y=1.05cm]
+    \node[destaque] (p0) at (0,0) {original};
+    \node[procf] (a) at (2,0) {A};
+    \node[procf] (c) at (3.5,0) {C};
+    \node[procf] (g) at (5,0) {G};
+    \node[procf] (e) at (3.5,-1) {E};
+    \node[procf] (b) at (2,-2) {B};
+    \node[procf] (f) at (3.5,-2) {F};
+    \node[procf] (d) at (2,-3) {D};
+    \draw[seta] (p0) -- node[rotulo, above] {i=0} (a);
+    \draw[seta] (a) -- node[rotulo, above] {i=1} (c);
+    \draw[seta] (c) -- node[rotulo, above] {i=2} (g);
+    \draw[seta] (a.south) |- node[rotulo, pos=0.75, above] {i=2} (e.west);
+    \draw[seta] (p0.south) |- node[rotulo, pos=0.8, above] {i=1} (b.west);
+    \draw[seta] (b) -- node[rotulo, above] {i=2} (f);
+    \draw[seta] (p0.south) ++(-0.3,0) |- node[rotulo, pos=0.8, above] {i=2} (d.west);
+\end{tikzpicture}
+\end{center}
+
+A cada iteração, o número de processos dobra. Com $n$ iterações:
+
+\begin{itemize}
+    \item existem $2^n$ processos ao todo, incluindo o original (aqui, $2^3 = 8$);
+    \item $2^n - 1$ deles são novos (aqui, 7);
+    \item foram executadas $1 + 2 + 4 + \dots + 2^{n-1} = 2^n - 1$ chamadas de \cmd{fork()}, embora o código tenha \textbf{uma só} chamada escrita.
+\end{itemize}
+
+\begin{alerta}[Oito criados não é o mesmo que oito vivos]
+A contagem diz quantos processos foram criados ao longo da execução. Não significa que os oito estejam vivos ao mesmo tempo: dependendo do escalonamento, um processo pode terminar antes que outro seja criado.
+\end{alerta}
+
+\begin{pergunta}
+E se cada filho saísse do laço logo depois de nascer (por exemplo, com um \cmd{break} dentro do \cmd{if (pid == 0)})? Nesse caso só o original completaria as três iterações, criando um filho em cada uma: seriam \textbf{4 processos} ao todo. Em geral, $n + 1$ em vez de $2^n$.
+\end{pergunta}
+
+% ============================================================
+\section{Cada processo tem a sua memória}\label{sec:memoria}
+% ============================================================
+
+\subsection{A previsão}
+
+Antes de executar \cmd{fork2.c}, vale fazer a previsão. Os filhos escrevem \cmd{v[0] = 5}, \cmd{v[1] = 6} e \cmd{v[2] = 7}. Se essas escritas chegassem ao vetor do original, a soma seria $5 + 6 + 7 = 18$. O que o programa imprime?
+
+\begin{lstlisting}[style=terminal]
+$ make run-fork
+./build/fork2
+Soma total no pai: 0
+\end{lstlisting}
+
+\subsection{Por que zero}
+
+O original nunca entra no ramo \cmd{if (pid == 0)}: para ele, \cmd{fork()} sempre devolve o PID de um filho. Portanto o original nunca escreve em \cmd{v}. Cada filho escreve na \textbf{sua cópia} do vetor, e essa escrita não alcança a memória de mais ninguém.
+
+\begin{center}
+\begin{tikzpicture}
+    \node[font=\small\bfseries, anchor=east] at (-0.2,1.6) {Pai antes};
+    \foreach \x in {0,1,2} \node[celula] at (\x*0.7+0.35,1.6) {0};
+    \draw[seta] (2.3,1.6) -- node[rotulo, above] {fork} (4.2,2.4);
+    \draw[seta] (2.3,1.6) -- (4.2,0.8);
+    \node[font=\small\bfseries, anchor=west] at (4.3,2.4) {Filho A};
+    \node[celula, fill=mLightBrown!25] at (6.1,2.4) {5};
+    \node[celula] at (6.8,2.4) {0};
+    \node[celula] at (7.5,2.4) {0};
+    \node[font=\scriptsize, anchor=west] at (8.0,2.4) {\texttt{v[0] = 0 + 5}};
+    \node[font=\small\bfseries, anchor=west] at (4.3,0.8) {Pai};
+    \foreach \x in {0,1,2} \node[celula] at (\x*0.7+6.1,0.8) {0};
+    \node[font=\scriptsize, anchor=west] at (8.0,0.8) {não entra em \texttt{pid == 0}};
+\end{tikzpicture}
+\end{center}
+
+Fica mais interessante quando olhamos o vetor de cada um dos oito processos. Um filho herda o vetor \emph{como estava no pai} no momento do \cmd{fork()}, e depois escreve a sua própria posição:
+
+\begin{center}
+\begin{tabular}{@{}lllc@{}}
+\toprule
+\textbf{Processo} & \textbf{Criado por} & \textbf{Vetor ao final} & \textbf{Soma} \\
+\midrule
+original & (início) & \cmd{[0, 0, 0]} & 0 \\
+A & original, \cmd{i = 0} & \cmd{[5, 0, 0]} & 5 \\
+B & original, \cmd{i = 1} & \cmd{[0, 6, 0]} & 6 \\
+D & original, \cmd{i = 2} & \cmd{[0, 0, 7]} & 7 \\
+C & A, \cmd{i = 1} & \cmd{[5, 6, 0]} & 11 \\
+E & A, \cmd{i = 2} & \cmd{[5, 0, 7]} & 12 \\
+F & B, \cmd{i = 2} & \cmd{[0, 6, 7]} & 13 \\
+G & C, \cmd{i = 2} & \cmd{[5, 6, 7]} & 18 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A soma 18 existe, mas só na memória de G, que herdou as escritas dos seus ancestrais A e C. Como G não é o original, ele não imprime nada. O original, que imprime, tem o vetor zerado.
+
+\subsection{Mesmo endereço, valores diferentes}
+
+Uma objeção comum: ``mas o endereço de \cmd{v} é o mesmo no pai e no filho''. É verdade, e o programa \cmd{memoria\_independente.c} mostra isso:
+
+\lstinputlisting[style=arquivo]{\raiz/examples/dia05/memoria_independente.c}
+
+\begin{lstlisting}[style=terminal]
+$ make run-memoria
+Filho: x = 99 em 0x7ffe72feea88
+Pai:   x = 10 em 0x7ffe72feea88
+\end{lstlisting}
+
+O endereço impresso é o mesmo, e os valores são diferentes. Não há contradição: o endereço é \textbf{virtual}. O número \cmd{0x7ffe72feea88} é interpretado dentro do espaço de endereçamento de cada processo, e o SO o traduz para posições físicas diferentes no pai e no filho. Mesmo endereço virtual não significa mesma memória.
+
+\subsection{E se o pai esperar os filhos?}
+
+O \cmd{fork2.c} já espera todos os filhos antes de somar, e mesmo assim a soma é zero. Esperar não resolve, porque \cmd{waitpid} não foi feito para transportar dados. Vamos ver o que ele faz.
+
+% ============================================================
+\section{Término e coleta: exit e waitpid}
+% ============================================================
+
+\subsection{Como um processo termina}
+
+Um processo termina quando retorna de \cmd{main}, quando chama \cmd{exit} ou \cmd{\_exit}, ou quando recebe um sinal que o encerra (por exemplo, \cmd{SIGKILL}). Ao terminar, ele deixa um \textbf{código de saída}: por convenção, \cmd{0} (\cmd{EXIT\_SUCCESS}) indica sucesso e qualquer outro valor indica falha.
+
+\subsection{waitpid}
+
+\begin{lstlisting}[style=codigo]
+#include <sys/wait.h>
+
+pid_t waitpid(pid_t pid, int *status, int opcoes);
+\end{lstlisting}
+
+\begin{itemize}
+    \item \cmd{pid} positivo espera aquele filho específico; \cmd{-1} espera qualquer filho.
+    \item Em \cmd{status}, o SO informa como o filho terminou.
+    \item Com \cmd{opcoes = 0}, a chamada \textbf{bloqueia} até algum filho terminar.
+    \item Devolve o PID do filho coletado, ou \cmd{-1} em caso de erro.
+\end{itemize}
+
+O inteiro \cmd{status} é codificado e deve ser lido com macros:
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Macro} & \textbf{Pergunta que responde} \\
+\midrule
+\cmd{WIFEXITED(status)} & O filho terminou normalmente (por \cmd{exit} ou retorno de \cmd{main})? \\
+\cmd{WEXITSTATUS(status)} & Se sim, qual foi o código de saída? \\
+\cmd{WIFSIGNALED(status)} & O filho foi encerrado por um sinal? \\
+\cmd{WTERMSIG(status)} & Se sim, qual sinal? \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Dois valores de \cmd{errno} aparecem nos exemplos:
+
+\begin{itemize}
+    \item \cmd{EINTR}: a espera foi interrompida por um sinal antes de algum filho terminar. Basta chamar \cmd{waitpid} de novo, e é isso que o laço \cmd{do \{ ... \} while} dos exemplos faz.
+    \item \cmd{ECHILD}: o processo não tem (mais) filhos para esperar. Em \cmd{fork2.c}, é a condição de saída do laço de coleta.
+\end{itemize}
+
+\subsection{Zumbis e órfãos}
+
+Quando um filho termina, o SO não pode descartar tudo: o pai ainda pode querer saber o código de saída. O processo terminado fica então num estado especial, como \textbf{zumbi}, ocupando uma entrada na tabela de processos até o pai coletá-lo com \cmd{wait} ou \cmd{waitpid}. No \cmd{ps}, aparece com estado \cmd{Z}.
+
+\begin{center}
+\begin{tikzpicture}[node distance=1.4cm]
+    \node[proc] (exec) {em execução};
+    \node[destaque, right=of exec] (zumbi) {zumbi};
+    \node[proc, right=of zumbi, fill=white] (fim) {removido};
+    \draw[seta] (exec) -- node[rotulo, above] {termina} (zumbi);
+    \draw[seta] (zumbi) -- node[rotulo, above] {pai coleta} (fim);
+\end{tikzpicture}
+\end{center}
+
+Se o pai termina antes do filho, o filho fica \textbf{órfão} e é adotado por outro processo (normalmente o \cmd{init}/\cmd{systemd}, PID 1), que se encarrega de coletá-lo. Um zumbi que dura muito tempo é sinal de um pai que esqueceu de chamar \cmd{waitpid}.
+
+\subsection{Esperar não é comunicar}
+
+\begin{center}
+\begin{tabular}{@{}p{0.45\linewidth}p{0.45\linewidth}@{}}
+\toprule
+\textbf{O que waitpid faz} & \textbf{O que waitpid não faz} \\
+\midrule
+Espera um filho terminar. & Não copia a memória do filho para o pai. \\
+Informa como ele terminou (código ou sinal). & Não cria memória compartilhada. \\
+Libera a entrada do zumbi. & Não transporta resultados calculados. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{definicao}[Ideia-chave]
+\cmd{waitpid} coordena o \textbf{término}. O código de saída tem só 8 bits e serve para indicar sucesso ou falha, não para devolver dados. Para levar um resultado do filho ao pai, os bytes precisam ser enviados explicitamente por algum mecanismo do SO.
+\end{definicao}
+
+% ============================================================
+\section{Comunicação entre processos com pipe}\label{sec:pipe}
+% ============================================================
+
+\subsection{IPC}
+
+Como a memória de cada processo é isolada, o SO oferece mecanismos para que processos troquem dados. Eles recebem o nome geral de \textbf{IPC} (\emph{Inter-Process Communication}). Pipes, sockets, filas de mensagens e memória compartilhada são exemplos. Nesta aula usamos o mais simples deles: o pipe.
+
+\subsection{O que é um pipe}
+
+\begin{definicao}
+Um \textbf{pipe} é um canal de bytes \textbf{unidirecional} mantido pelo núcleo do SO. Ele tem duas pontas: tudo o que é escrito numa ponta pode ser lido, na mesma ordem, na outra.
+\end{definicao}
+
+Você já usa pipes no terminal: em \cmd{ps aux | grep sleep}, o shell cria um pipe, liga a saída de \cmd{ps} à ponta de escrita e a entrada de \cmd{grep} à ponta de leitura.
+
+\begin{lstlisting}[style=codigo]
+#include <unistd.h>
+
+int pipe(int fd[2]);   /* 0 em sucesso, -1 em erro */
+\end{lstlisting}
+
+A chamada preenche o vetor com dois \textbf{descritores de arquivo}:
+
+\begin{itemize}
+    \item \cmd{fd[0]}: a ponta de \textbf{leitura};
+    \item \cmd{fd[1]}: a ponta de \textbf{escrita}.
+\end{itemize}
+
+Uma forma de lembrar: 0 é a entrada padrão (lemos dela) e 1 é a saída padrão (escrevemos nela).
+
+\subsection{Descritores de arquivo}
+
+Um descritor é um número inteiro pequeno que o processo usa para se referir a um recurso aberto: um arquivo, um terminal, um pipe. Cada processo tem a sua \textbf{tabela de descritores}; o número é um índice nessa tabela. Os três primeiros já vêm abertos: \cmd{0} (entrada padrão), \cmd{1} (saída padrão) e \cmd{2} (saída de erros). Por isso \cmd{pipe()} costuma devolver \cmd{3} e \cmd{4}.
+
+Quando o processo chama \cmd{fork()}, o filho recebe uma \textbf{cópia da tabela}. As entradas copiadas apontam para os \emph{mesmos} recursos do núcleo. É isso que permite a comunicação: se o pipe é criado \textbf{antes} do \cmd{fork()}, pai e filho passam a ter referências ao mesmo canal.
+
+\begin{center}
+\begin{tikzpicture}[
+    tab/.style={draw=mDarkTeal, minimum width=1.5cm, minimum height=0.55cm, font=\ttfamily\footnotesize, fill=white},
+    tabx/.style={tab, fill=black!8, text=black!45}]
+    % Filho
+    \node[font=\small\bfseries] at (0,2.35) {Filho};
+    \node[tab] (f0) at (0,1.65) {0 entrada};
+    \node[tab, below=0pt of f0] (f1) {1 saída};
+    \node[tab, below=0pt of f1] (f2) {2 erros};
+    \node[tabx, below=0pt of f2] (f3) {3 fechado};
+    \node[tab, below=0pt of f3, fill=mLightBrown!15] (f4) {4 = fd[1]};
+    % Pai
+    \node[font=\small\bfseries] at (9,2.35) {Pai};
+    \node[tab] (p0) at (9,1.65) {0 entrada};
+    \node[tab, below=0pt of p0] (p1) {1 saída};
+    \node[tab, below=0pt of p1] (p2) {2 erros};
+    \node[tab, below=0pt of p2, fill=mLightBrown!15] (p3) {3 = fd[0]};
+    \node[tabx, below=0pt of p3] (p4) {4 fechado};
+    % Pipe
+    \node[draw=mLightBrown, fill=mLightBrown!12, thick, minimum width=3.2cm, minimum height=0.8cm, font=\small]
+        (pipe) at (4.5,-0.45) {buffer do pipe};
+    \node[font=\scriptsize, color=black!60, below=0.1cm of pipe] {núcleo do SO};
+    \draw[setad] (f4.east) -- node[rotulo, above, sloped] {escreve} (pipe.west);
+    \draw[setad] (pipe.east) -- node[rotulo, above, sloped] {lê} (p3.west);
+\end{tikzpicture}
+\end{center}
+
+A figura mostra o estado depois que cada processo fechou a ponta que não usa: o filho fechou a leitura (\cmd{3}) e o pai fechou a escrita (\cmd{4}).
+
+\subsection{A ordem das operações}
+
+\begin{enumerate}
+    \item \cmd{pipe(fd)}: o pai cria o canal.
+    \item \cmd{fork()}: o filho herda os dois descritores.
+    \item Cada processo \textbf{fecha a ponta que não usa}: o filho, que só escreve, fecha \cmd{fd[0]}; o pai, que só lê, fecha \cmd{fd[1]}.
+    \item O filho escreve com \cmd{write(fd[1], ...)}; o pai lê com \cmd{read(fd[0], ...)}.
+    \item Cada um fecha a ponta que usou quando termina.
+    \item O pai coleta o filho com \cmd{waitpid}.
+\end{enumerate}
+
+\begin{alerta}[Pipe criado depois do fork não serve]
+Se \cmd{pipe()} for chamado depois de \cmd{fork()}, pai e filho criam \emph{dois pipes diferentes}, cada um visível só para quem o criou. Não há canal em comum.
+\end{alerta}
+
+\subsection{read e write}
+
+\begin{lstlisting}[style=codigo]
+ssize_t write(int fd, const void *buf, size_t n);
+ssize_t read(int fd, void *buf, size_t n);
+\end{lstlisting}
+
+As duas chamadas trabalham com \textbf{bytes}. \cmd{write} copia até \cmd{n} bytes a partir do endereço \cmd{buf} para o canal; \cmd{read} copia até \cmd{n} bytes do canal para o endereço \cmd{buf}. Ambas devolvem quantos bytes foram de fato transferidos, ou \cmd{-1} em caso de erro.
+
+Para enviar um \cmd{int}, passamos o endereço da variável e o seu tamanho:
+
+\begin{lstlisting}[style=codigo]
+write(fd[1], &valor, sizeof valor);   /* no filho */
+read(fd[0], &valor, sizeof valor);    /* no pai */
+\end{lstlisting}
+
+\begin{definicao}[O ponteiro não é compartilhado]
+\cmd{\&valor} no filho e \cmd{\&valor} no pai são endereços de variáveis locais de cada processo. O SO \textbf{copia os bytes} da variável do filho para o buffer do pipe e, depois, do buffer para a variável do pai. As duas variáveis continuam separadas.
+\end{definicao}
+
+Enviar os bytes de um \cmd{int} (ou de um \cmd{double}, como em \cmd{pipe2.c}) funciona porque pai e filho rodam na mesma máquina e representam números da mesma forma. Entre computadores diferentes seria preciso combinar um formato, como texto.
+
+\subsection{Bloqueio e fim de arquivo}
+
+O comportamento de \cmd{read} depende do estado do pipe:
+
+\begin{center}
+\begin{tabular}{@{}p{0.42\linewidth}p{0.48\linewidth}@{}}
+\toprule
+\textbf{Situação} & \textbf{O que read faz} \\
+\midrule
+Há dados no pipe & Devolve os bytes disponíveis, até \cmd{n}. Pode devolver \emph{menos} do que o pedido. \\
+Pipe vazio e alguma ponta de escrita ainda aberta & \textbf{Bloqueia}: o processo dorme até chegarem dados. \\
+Pipe vazio e todas as pontas de escrita fechadas & Devolve \cmd{0}: \textbf{fim de arquivo} (EOF). \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Do lado da escrita, também há regras:
+
+\begin{itemize}
+    \item O buffer do pipe tem capacidade limitada (64\,KiB por padrão no Linux). Se estiver cheio, \cmd{write} bloqueia até o leitor consumir dados.
+    \item Escritas de até \cmd{PIPE\_BUF} bytes (4096 no Linux) são \textbf{atômicas}: não se misturam com escritas de outros processos no mesmo pipe. Um \cmd{int} cabe com folga.
+    \item Escrever num pipe sem nenhuma ponta de leitura aberta gera o sinal \cmd{SIGPIPE}, que por padrão encerra o processo. Se o sinal for ignorado, \cmd{write} devolve \cmd{-1} com \cmd{errno = EPIPE}. O \cmd{pipe2.c} ignora \cmd{SIGPIPE} justamente para poder tratar esse erro.
+\end{itemize}
+
+\begin{pergunta}[Por que fechar as pontas que não usamos?]
+Suponha que o pai esqueça de fechar a sua cópia de \cmd{fd[1]}. Se o filho terminar sem escrever, o pipe fica vazio, mas ainda existe uma ponta de escrita aberta: a do próprio pai. O \cmd{read} do pai então espera para sempre, porque o EOF só chega quando \textbf{todas} as pontas de escrita estão fechadas, inclusive as cópias herdadas.
+\end{pergunta}
+
+\subsection{O exemplo pipe\_soma.c}
+
+O filho calcula \cmd{10 + 20} e envia o resultado ao pai:
+
+\lstinputlisting[style=arquivo]{\raiz/examples/dia05/pipe_soma.c}
+
+\begin{lstlisting}[style=terminal]
+$ make run-pipe-soma
+./build/pipe-soma
+Resultado recebido: 30
+\end{lstlisting}
+
+\subsubsection{O helper transferir}
+Como \cmd{read} e \cmd{write} podem transferir menos bytes do que o pedido, chamá-las uma única vez não garante que o \cmd{int} inteiro foi enviado ou recebido. A função \cmd{transferir} resolve isso com um laço:
+
+\begin{itemize}
+    \item \cmd{modo = 1} chama \cmd{write}; \cmd{modo = 0} chama \cmd{read}.
+    \item A cada volta, avança o ponteiro \cmd{p} e diminui \cmd{tamanho} pelo número de bytes transferidos, até não restar nada.
+    \item Se a chamada foi interrompida por um sinal (\cmd{EINTR}), tenta de novo.
+    \item Se \cmd{read} devolve \cmd{0} antes do fim, o escritor fechou o canal cedo demais; isso é tratado como erro.
+\end{itemize}
+
+Na atividade prática você vai \emph{usar} esse helper, não reescrevê-lo. O foco é o protocolo: quem fecha qual ponta, quem envia e quem recebe.
+
+\subsubsection{A verificação final do pai}
+O pai só imprime o valor se três coisas deram certo: a recepção (\cmd{resultado == 0}), o término normal do filho (\cmd{WIFEXITED}) e o código de saída zero. Aqui \cmd{waitpid} e o pipe trabalham juntos: o pipe trouxe o dado, e \cmd{waitpid} confirmou que o filho terminou bem.
+
+% ============================================================
+\section{Vários processos: pipe2.c}
+% ============================================================
+
+\subsection{O problema}
+
+O \cmd{pipe2.c} calcula as raízes de uma equação do segundo grau usando seis processos e cinco pipes. O cálculo é pequeno e não fica mais rápido assim; o programa existe para mostrar vários canais funcionando ao mesmo tempo.
+
+O usuário digita \cmd{a}, \cmd{b} e \cmd{delta} (já calculado; o programa não pede \cmd{c}). As raízes são
+
+\[
+x_1 = \frac{-b - \sqrt{\Delta}}{2a}, \qquad x_2 = \frac{-b + \sqrt{\Delta}}{2a}.
+\]
+
+\subsection{Quem cria quem}
+
+\begin{center}
+\begin{tikzpicture}[node distance=0.6cm and 1.2cm]
+    \node[destaque] (pai) {Pai original};
+    \node[proc, below left=1cm and 1.2cm of pai] (calc) {Calculador\\\scriptsize\texttt{son1}};
+    \node[proc, below right=1cm and 1.2cm of pai] (coord) {Coordenador\\\scriptsize\texttt{son5}};
+    \node[procf, minimum width=2cm, below=1cm of coord] (f2) {fornece \texttt{2a}};
+    \node[procf, minimum width=2cm, left=0.4cm of f2] (f1) {fornece \texttt{-b}};
+    \node[procf, minimum width=2cm, right=0.4cm of f2] (f3) {fornece \texttt{delta}};
+    \draw[seta] (pai) -- (calc);
+    \draw[seta] (pai) -- (coord);
+    \draw[seta] (coord) -- (f1);
+    \draw[seta] (coord) -- (f2);
+    \draw[seta] (coord) -- (f3);
+\end{tikzpicture}
+\end{center}
+
+\begin{itemize}
+    \item O \textbf{pai} lê a entrada, cria os cinco pipes e depois os dois filhos diretos.
+    \item O \textbf{calculador} recebe os três componentes, calcula as raízes e as envia ao pai.
+    \item O \textbf{coordenador} cria três \textbf{fornecedores}, um para cada componente, e coleta esses filhos.
+\end{itemize}
+
+Os valores digitados são lidos pelo pai \emph{antes} dos \cmd{fork()}, então todos os filhos já os herdam na memória. Mesmo assim, os fornecedores enviam os componentes ao calculador pelos pipes: o objetivo é exercitar o protocolo.
+
+\subsection{Por onde os dados passam}
+
+\begin{center}
+\begin{tikzpicture}[node distance=0.35cm]
+    \node[procf, minimum width=2.1cm] (f1) {\texttt{-b}};
+    \node[procf, minimum width=2.1cm, below=of f1] (f2) {\texttt{2a}};
+    \node[procf, minimum width=2.1cm, below=of f2] (f3) {\texttt{delta}};
+    \node[proc, right=3.2cm of f2, minimum height=1.6cm] (calc) {Calculador};
+    \node[destaque, right=3.2cm of calc] (pai) {Pai};
+    \draw[setad] (f1.east) -- node[rotulo, above, sloped] {\texttt{canais[0]}} (calc.west);
+    \draw[setad] (f2.east) -- node[rotulo, above] {\texttt{canais[1]}} (calc.west);
+    \draw[setad] (f3.east) -- node[rotulo, below, sloped] {\texttt{canais[2]}} (calc.west);
+    \draw[setad] ([yshift=0.25cm]calc.east) -- node[rotulo, above] {\texttt{canais[3]}: x1} ([yshift=0.25cm]pai.west);
+    \draw[setad] ([yshift=-0.25cm]calc.east) -- node[rotulo, below] {\texttt{canais[4]}: x2} ([yshift=-0.25cm]pai.west);
+\end{tikzpicture}
+\end{center}
+
+\begin{alerta}[Árvore de criação e fluxo de dados são coisas diferentes]
+Os fornecedores são filhos do coordenador, mas não enviam nada a ele: enviam ao calculador, que é seu ``tio''. Quem pode usar um pipe é quem tem um descritor dele, e todos herdaram os cinco canais do pai original. A árvore diz quem criou quem; os pipes dizem quem conversa com quem.
+\end{alerta}
+
+\subsection{Cada processo fica só com as pontas que usa}
+
+A função \cmd{fechar\_exceto} fecha todos os descritores dos cinco pipes, exceto os indicados. A tabela resume o que cada processo mantém aberto:
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Processo} & \textbf{Lê de} & \textbf{Escreve em} \\
+\midrule
+Pai & \cmd{canais[3]}, \cmd{canais[4]} & nenhum \\
+Calculador & \cmd{canais[0]}, \cmd{canais[1]}, \cmd{canais[2]} & \cmd{canais[3]}, \cmd{canais[4]} \\
+Coordenador & nenhum & \cmd{canais[0..2]}, só até criar os fornecedores \\
+Fornecedor \cmd{i} & nenhum & \cmd{canais[i]} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+O coordenador mantém as três pontas de escrita apenas para que os fornecedores as herdem; logo depois de criá-los, fecha todas. Se não fechasse, o calculador nunca veria EOF nesses canais caso um fornecedor falhasse.
+
+\subsection{Os trechos principais}
+
+O código completo está em \cmd{pipe2.c}. Os trechos abaixo concentram as ideias da aula.
+
+\lstinputlisting[style=arquivo, firstline=74, lastline=91, firstnumber=74]{\raiz/pipe2.c}
+
+O calculador fecha tudo o que não usa, recebe os três valores, calcula e envia as raízes. Os fornecedores são criados num laço dentro do coordenador:
+
+\lstinputlisting[style=arquivo, firstline=93, lastline=116, firstnumber=93]{\raiz/pipe2.c}
+
+Note o \cmd{for} interno no filho: cada fornecedor fecha as pontas de escrita dos \emph{outros} dois canais e fica só com a sua.
+
+\subsection{Execução}
+
+\begin{lstlisting}[style=terminal]
+$ make run-pipe
+Digite a, b e delta (delta ja calculado): 1 -3 1
+Raizes: x1 = 1; x2 = 2
+\end{lstlisting}
+
+Conferindo: $-b = 3$, $2a = 2$ e $\sqrt{\Delta} = 1$. Então $x_1 = (3 - 1)/2 = 1$ e $x_2 = (3 + 1)/2 = 2$. Com a entrada \cmd{1 -2 0}, o programa mostra uma raiz dupla ($x_1 = x_2 = 1$).
+
+% ============================================================
+\section{Atividade prática}
+% ============================================================
+
+\subsection{O que fazer}
+
+Abra \cmd{examples/dia05/pipe\_soma\_atividade.c}. Ele é o \cmd{pipe\_soma.c} com seis lacunas, marcadas em laranja abaixo:
+
+\begin{lstlisting}[style=codigo]
+if (pid == 0) {
+    close(@/* 1: ponta que o filho nao usa */@);
+    valor = @/* 2: calculo */@;
+    int resultado = @/* 3: enviar valor pelo helper transferir */@;
+    close(fd[1]);
+    _exit(resultado == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
+}
+close(@/* 4: ponta que o pai nao usa */@);
+int resultado = @/* 5: receber valor pelo helper transferir */@;
+close(@/* 6: ponta usada pelo pai */@);
+\end{lstlisting}
+
+Complete as lacunas para que:
+
+\begin{itemize}
+    \item o filho feche a sua ponta de leitura, calcule \cmd{10 + 20}, envie o inteiro e feche a ponta de escrita;
+    \item o pai feche a sua ponta de escrita, receba o inteiro, feche a ponta de leitura e imprima o valor.
+\end{itemize}
+
+Lembre a assinatura do helper: \cmd{transferir(descritor, endereço do dado, quantidade de bytes, modo)}, com modo \cmd{1} para enviar e \cmd{0} para receber.
+
+\subsection{Compilar e testar}
+
+\begin{lstlisting}[style=terminal]
+$ gcc -std=c11 -Wall -Wextra -Wpedantic -Werror \
+      examples/dia05/pipe_soma_atividade.c -o /tmp/pipe-soma-aluno
+$ /tmp/pipe-soma-aluno
+Resultado recebido: 30
+\end{lstlisting}
+
+Antes de preencher, o esqueleto não compila. Isso é proposital.
+
+\subsection{Lista de conferência}
+
+\begin{itemize}
+    \item Cada processo fecha \textbf{exatamente uma} ponta antes de usar o canal, e é a ponta que ele não usa.
+    \item O filho usa a ponta de escrita; o pai usa a de leitura.
+    \item O tamanho passado ao helper é o tamanho do dado (\cmd{sizeof valor}), não o tamanho de um ponteiro.
+    \item O endereço passado é o da variável (\cmd{\&valor}), não o seu valor.
+    \item Você consegue explicar por que escrever em \cmd{valor} no filho, sem o pipe, não mudaria \cmd{valor} no pai.
+\end{itemize}
+
+\subsection{Perguntas para responder em dupla}
+
+\begin{enumerate}
+    \item Por que o pipe precisa ser criado antes do \cmd{fork()}?
+    \item Se o pai executar \cmd{read} antes de o filho escrever, isso é um erro? Quando o pai espera? Quando encontra EOF?
+    \item Por que os dois processos fecham pontas diferentes?
+\end{enumerate}
+
+\subsection{Erros comuns}
+
+\begin{center}
+\begin{tabular}{@{}p{0.36\linewidth}p{0.56\linewidth}@{}}
+\toprule
+\textbf{Se você pensou\ldots} & \textbf{Reveja\ldots} \\
+\midrule
+``O pai soma 18.'' & Em qual processo cada atribuição acontece? Desenhe as memórias separadas. \\
+``São quatro processos.'' & Siga um filho na próxima iteração: ele não sai do laço. \\
+``waitpid compartilha memória.'' & Separe esperar o término de transportar os bytes. \\
+``read sempre recebe tudo.'' & O retorno informa quantos bytes chegaram. \\
+``Pipe vazio sempre dá EOF.'' & Alguma ponta de escrita ainda está aberta? \\
+``Mesmo endereço, mesma memória.'' & O endereço é virtual e interpretado em cada processo. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================
+\section{Resumo}
+% ============================================================
+
+\begin{center}
+\begin{tabular}{@{}lp{0.68\linewidth}@{}}
+\toprule
+\textbf{Chamada} & \textbf{Papel} \\
+\midrule
+\cmd{fork()} & Cria um processo filho com uma cópia independente da memória e dos descritores do pai. Devolve 0 ao filho, o PID do filho ao pai e -1 em caso de falha. \\
+\cmd{getpid()} / \cmd{getppid()} & PID do próprio processo / PID do pai. \\
+\cmd{\_exit(codigo)} & Encerra o processo imediatamente, sem esvaziar buffers de \cmd{stdio}. \\
+\cmd{waitpid(pid, \&st, 0)} & Espera um filho terminar e coleta o seu estado. Coordena o término; não transporta dados. \\
+\cmd{pipe(fd)} & Cria um canal unidirecional: \cmd{fd[0]} lê, \cmd{fd[1]} escreve. \\
+\cmd{write} / \cmd{read} & Copiam bytes para o canal e do canal. Podem transferir menos que o pedido; \cmd{read} bloqueia com o canal vazio e devolve 0 no EOF. \\
+\cmd{close(fd)} & Fecha um descritor. Fechar todas as pontas de escrita é o que gera EOF para o leitor. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{definicao}[Em três frases]
+\cmd{fork()} cria processos com memórias independentes. \cmd{waitpid} coordena o término e coleta os filhos. O pipe transporta os dados entre eles.
+\end{definicao}
+
+\begin{exemplo}[Próxima aula: 7/10]
+Threads de um mesmo processo \textbf{compartilham} a memória. Aí o problema se inverte: os dados chegam sem esforço, mas é preciso controlar quem acessa o quê e quando. Esse é o assunto de região crítica, Peterson e semáforos.
+\end{exemplo}
+
+% ============================================================
+\section{Exercícios de fixação}
+% ============================================================
+
+\begin{enumerate}
+    \item Em \cmd{fork2.c}, troque \cmd{tamanho} para 4. Quantos processos existem ao todo? Quantas chamadas de \cmd{fork()} são executadas?
+    \item Quantas vezes o programa abaixo imprime \cmd{oi}? Desenhe a árvore.
+\begin{lstlisting}[style=codigo]
+int main(void) { fork(); fork(); printf("oi\n"); return 0; }
+\end{lstlisting}
+    \item O programa abaixo imprime \cmd{AA} no terminal, embora haja um único \cmd{printf}. Explique.
+\begin{lstlisting}[style=codigo]
+int main(void) { printf("A"); fork(); return 0; }
+\end{lstlisting}
+    \item Na tabela da Seção~\ref{sec:memoria}, qual é o vetor do processo E e por quê?
+    \item Em \cmd{pipe\_soma.c}, o que aconteceria se o pai não fechasse \cmd{fd[1]} e o filho terminasse com falha antes de escrever?
+    \item Para que pai e filho conversem nos dois sentidos (pergunta e resposta), quantos pipes são necessários? Por quê?
+    \item Por que o filho chama \cmd{\_exit} em vez de \cmd{exit} ou \cmd{return}?
+    \item Por que \cmd{pipe2.c} ignora o sinal \cmd{SIGPIPE}?
+\end{enumerate}
+
+\subsection*{Respostas}
+
+\begin{enumerate}
+    \item $2^4 = 16$ processos ao todo, 15 novos; também 15 chamadas executadas ($1 + 2 + 4 + 8$).
+    \item Quatro vezes. O primeiro \cmd{fork()} gera 2 processos; cada um executa o segundo \cmd{fork()}, gerando 4. Os quatro chegam ao \cmd{printf}.
+    \item O \cmd{A} fica no buffer de \cmd{stdout}, pois não há quebra de linha. O \cmd{fork()} copia o buffer. Cada processo, ao retornar de \cmd{main}, esvazia a sua cópia, e o \cmd{A} aparece duas vezes. Um \cmd{fflush(stdout)} antes do \cmd{fork()} evita a duplicação.
+    \item \cmd{[5, 0, 7]}. E foi criado por A na iteração \cmd{i = 2}. Herdou o vetor de A, que já tinha \cmd{v[0] = 5}, e escreveu \cmd{v[2] = 7}.
+    \item O \cmd{read} do pai bloquearia para sempre. O pipe estaria vazio, mas a ponta de escrita do próprio pai continuaria aberta, e o EOF nunca chegaria. O pai também nunca chegaria ao \cmd{waitpid}.
+    \item Dois. O pipe é unidirecional: um canal leva dados do pai ao filho e o outro, do filho ao pai. Usar um só canal nos dois sentidos faria um processo poder ler o que ele mesmo escreveu.
+    \item \cmd{exit} e \cmd{return} esvaziam os buffers de \cmd{stdio} herdados do pai (podendo duplicar saídas) e executam funções registradas pelo pai. \cmd{\_exit} encerra só o filho, sem esses efeitos.
+    \item Se o leitor de um canal terminar antes, uma escrita nesse canal geraria \cmd{SIGPIPE} e encerraria o processo sem chance de tratamento. Ignorando o sinal, \cmd{write} devolve \cmd{-1} com \cmd{EPIPE}, e o programa trata a falha normalmente.
+\end{enumerate}
+
+% ============================================================
+\section*{Para saber mais}
+\addcontentsline{toc}{section}{Para saber mais}
+% ============================================================
+
+\begin{itemize}
+    \item Páginas de manual do Linux: \cmd{man 2 fork}, \cmd{man 2 waitpid}, \cmd{man 2 pipe} e \cmd{man 7 pipe}. Também disponíveis em \url{https://man7.org/linux/man-pages/}.
+    \item A. S. Tanenbaum e H. Bos. \emph{Sistemas Operacionais Modernos}. Capítulo 2: processos e threads.
+    \item A. Silberschatz, P. B. Galvin e G. Gagne. \emph{Fundamentos de Sistemas Operacionais}. Capítulo 3: processos e comunicação entre processos.
+\end{itemize}
+
+\end{document}

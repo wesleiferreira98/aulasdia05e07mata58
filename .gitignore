@@ -19,3 +19,14 @@ __pycache__/
 /.aws/
 
 **/target/
+
+# LaTeX
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.nav
+*.snm
+*.toc
+*.vrb
+*.synctex.gz
