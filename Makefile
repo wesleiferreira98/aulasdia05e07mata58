@@ -1,0 +1,51 @@
+CC = gcc
+CFLAGS = -std=c11 -Wall -Wextra -Wpedantic -Werror -O2
+BUILD = build
+MONITOR = Monitor-20261002T192224Z-1-001/Monitor
+PROGRAMS = $(BUILD)/fork2 $(BUILD)/pipe2 $(BUILD)/peterson $(BUILD)/prod_cons
+
+.PHONY: all test java run-fork run-pipe run-peterson run-prod-cons run-java-3b run-java-3s
+all: $(PROGRAMS)
+
+$(BUILD):
+	mkdir -p $@
+
+$(BUILD)/fork2: fork2.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD)/pipe2: pipe2.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@ -lm
+
+$(BUILD)/peterson: peterson-code.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@ -pthread
+
+$(BUILD)/prod_cons: prod_cons.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@ -pthread
+
+test: all
+	python3 tests/test_examples.py
+
+java: $(BUILD)/java-3b/.compiled $(BUILD)/java-3s/.compiled
+
+$(BUILD)/java-3b/.compiled: $(wildcard $(MONITOR)/1/*.java)
+	mkdir -p $(BUILD)/java-3b
+	javac -d $(BUILD)/java-3b $^
+	touch $@
+
+$(BUILD)/java-3s/.compiled: $(wildcard $(MONITOR)/3/*.java)
+	mkdir -p $(BUILD)/java-3s
+	javac -d $(BUILD)/java-3s $^
+	touch $@
+
+run-fork: $(BUILD)/fork2
+	./$(BUILD)/fork2
+run-pipe: $(BUILD)/pipe2
+	./$(BUILD)/pipe2
+run-peterson: $(BUILD)/peterson
+	./$(BUILD)/peterson
+run-prod-cons: $(BUILD)/prod_cons
+	./$(BUILD)/prod_cons
+run-java-3b: java
+	java -cp $(BUILD)/java-3b ThreadSync3b
+run-java-3s: java
+	java -cp $(BUILD)/java-3s ThreadSync3s

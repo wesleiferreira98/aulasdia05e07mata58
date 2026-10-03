@@ -1,0 +1,212 @@
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+
+  <meta name="GENERATOR" content="Adobe PageMill 3.0 Win">
+  <title>Java Thread synchronization</title>
+</head><body bgcolor="#ffffff">
+
+<h1><a name="anchor698098"></a><font color="#7482cd">Monitors
+and Synchronization</font></h1>
+
+<p>Recall that all threads in a program share one heap. This means
+that they can all see, and interact with all the objects in the
+program. (On the other hand, each thread has its own stack for
+local variables.) In many cases this sharing does not matter.
+Each thread references only objects that other threads do not
+reference. In this case each thread goes on its merry way without
+interfering with any other thread. However, when threads interact
+with the same object, trouble in the form of strange bugs can
+arise.</p>
+
+<h2>Mailbox Example</h2>
+
+<p>Consider a simple mailbox. The mailbox has state. In one state
+there is no mail. In the other state, mail has arrived. The mailbox
+has a boolean variable, youHaveMail to reflect its state, and
+an array of characters to hold any message that has arrived. This
+being a vary small mailbox, it can only hold 72 characters.</p>
+
+<p>There is one owner of the mailbox who is so anxious that he
+checks his mail every 20 milliseconds. The owner of the mailbox
+has two friends who send one line messages at random intervals.</p>
+
+<p>The consumer of messages (the owner of the mailbox) and the
+two message producers are represented as independent threads.
+As all three threads attempt to read and write to the one mailbox
+object you can expect trouble!</p>
+
+<h3>Unsynchronized mailbox program (a non-GUI Java application)</h3>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/javaApps/mailbox/Mailbox3b.java">Mailbox3b.Java</a></p>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/javaApps/mailbox/ThreadSync3b.java">ThreadSync3b.java</a></p>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/javaApps/mailbox/Producer3b.java">Producer3b.java</a></p>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/javaApps/mailbox/Consumer3b.java">Consumer3b.java</a></p>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/javaApps/mailbox/ThreadSync3b.txt">Sample output</a></p>
+
+<h2>The monitor</h2>
+
+<p>Java uses the monitor concept as the basis of its thread synchronization.
+A monitor is an object that can block and revive threads.</p>
+
+<h3>A Monitor analogy.</h3>
+
+<p>A gas station has a single toilet the key for which is kept
+at the service desk. This is a shared resource for passing motorists.
+To use this shared resource the prospective user must acquire
+a key to the lock on the toilet. The user goes to the service
+desk and acquires the key opens the door, locks it from the inside
+and uses the facilities.</p>
+
+<p>Meanwhile, if a second prospective user arrives at the gas
+station he finds the toilet locked and therefore unavailable to
+him. He goes to the service desk but the key is not there because
+it is in the hands of the current user. When the current user
+finishes, he unlocks the door and returns the key to the service
+desk where it is given to the waiting customer. If more than one
+prospective user turns up while the toilet is locked, they must
+form a queue waiting for the key to the lock.</p>
+
+<p>Obviously in applying this analogy to Java, a Java thread is
+a user and the toilet is a block of code which the thread wishes
+to execute. Java provides a way to lock the code for a thread
+which is currently executing it, and making other threads that
+wish to use it wait until the first thread is finished. These
+other threads are placed in the waiting state. Java is not as
+fair as the service station because there is no queue. Any one
+of the waiting threads may get the monitor next, regardless of
+the order they asked for it. The only guarantee is that all threads
+will get to use the monitored code sooner or later.</p>
+
+<h2>The synchronized keyword.</h2>
+
+<p>A block of code can be turned into a monitor using the keyword
+<b><font color="#ff0000">synchronized</font></b>.</p>
+
+<h3>There are two ways to use synchronized</h3>
+
+<p><b>Synchronizing a whole method</b> by adding the word synchronized
+as a modifier in the method's header. This is the most common
+way of doing it. Many of Java's API methods are synchronized this
+way. For example, <b><font color="#ff0000">public synchronized
+void setLabel(String label)</font></b> from the Button class.
+The object referenced in the method call is the object holding
+the lock, in this case the Button object.</p>
+
+<p><b>Synchronizing only a block of code within a method</b> using
+the synchronized keyword. The block of code is preceded by the
+keyword synchronized and an expression which references the object
+holding the lock. For example, here is a code fragment which changes
+all values in an array to positive and prevents any other thread
+from changing any elements before the code has finished making
+all the changes.</p>
+
+<ul>
+  <dl>
+    <dt><b><code><font color="#ff00ff">public void static absolute(int
+    [] values) {</font></code></b>
+    </dt><dl>
+      <dt><b><code><font color="#ff00ff">synchronized (values) {</font></code></b>
+      </dt><dl>
+        <dt><b><code><font color="#ff00ff">for(int i=0; i &lt; values.length;
+        i++) {</font></code></b>
+        </dt><dl>
+          <dt><b><code><font color="#ff00ff">if(values[i] &lt; 0)</font></code></b>
+          </dt><dl>
+            <dt><b><code><font color="#ff00ff">values[i] = -values[i];</font></code></b>
+          </dt></dl>
+        </dl>
+        <dt><b><code><font color="#ff00ff">}</font></code></b>
+      </dt></dl>
+      <dt><b><code><font color="#ff00ff">}</font></code></b>
+    </dt></dl>
+    <dt><b><code><font color="#ff00ff">}</font></code></b>
+  </dt></dl>
+</ul>
+
+<h3>The mailbox program with two key methods synchronized</h3>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/javaApps/mailbox/Mailbox3g.java">Mailbox3g.java</a></p>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/javaApps/mailbox/ThreadSync3g.java">ThreadSync3g.java</a></p>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/javaApps/mailbox/Producer3g.java">Producer3g.java</a></p>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/javaApps/mailbox/Consumer3g.java">Consumer3g.java</a></p>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/javaApps/mailbox/ThreadSync3g.txt">Sample output</a></p>
+
+<h2>wait(), notify() and notifyAll()</h2>
+
+<p>Looking at the output of the synchronized version Mailbox3g.java
+you can see that the anxious consumer often goes to the mailbox
+and is disappointed because no mail has arrived. It would be nicer,
+and more efficient, if the consumer waited until notified that
+a message has arrived.</p>
+
+<p>The methods wait(), notify() and notifyAll() service this need.
+Note that all three can only be used within synchronized code.
+If you try to use them outside of synchronization you will get
+a compiler error. Note that these methods belong to the Object
+class, not the Thread class.</p>
+
+<dl>
+  <dt><b><code><font color="#ff0000">public final void wait() throws
+  InterruptedException</font></code></b>
+  </dt><dt><b><code><font color="#ff0000">public final native void wait(long
+  timeout) throws InterruptedException</font></code></b>
+</dt></dl>
+
+<p>wait() puts the current thread into the waiting state.</p>
+
+<p><b><code><font color="#ff0000">public final native void notify()</font></code></b></p>
+
+<p>notify() looks at the threads in the waiting state, and picks
+one (which one is unpredictable) and moves it to the ready state
+where the scheduler will decide what to do with it. Any other
+threads in the waiting state remain there until notify() or notifyAll()
+are called again.</p>
+
+<p><b><code><font color="#ff0000">public final native void notifyAll()</font></code></b></p>
+
+<p>notifyAll() moves all the threads in the waiting state into
+the ready state where the scheduler will decide when they will
+move to the running state. NotifyAll() is much more commonly used
+than notify() because the latter could conceivably leave a thread
+waiting for a very long time if it were unlucky.</p>
+
+<h3>The mailbox program with synchronization and wait() and notify().</h3>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/javaApps/mailbox/Mailbox3s.java">Mailbox3s.java</a></p>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/javaApps/mailbox/ThreadSync3s.java">ThreadSync3s.java</a></p>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/javaApps/mailbox/Producer3s.java">Producer3s.java</a></p>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/javaApps/mailbox/Consumer3s.java">Consumer3s.java</a></p>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/javaApps/mailbox/ThreadSync3s.txt">Example output</a></p>
+
+<h3>Some important thread problems</h3>
+
+<ul>
+  <li>race conditions
+  </li><li>starvation
+  </li><li>deadlock
+</li></ul>
+
+<p>These are not covered in this course. The Java Tutorial has
+a <a href="http://www.javasoft.com/docs/books/tutorial/essential/threads/deadlock.html">discussion</a>.
+There is an applet illustrating the famous "dining philosophers"
+problem.</p>
+
+<p><a href="http://www.javasoft.com/docs/books/tutorial/essential/threads/multithreaded.html">Tutorial</a></p>
+
+<p>&nbsp;</p>
+
+<p><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/threadsControlling.html#anchor59418"><img src="threadsMonitors_files/Image4.gif" naturalsizeflag="3" width="26" align="bottom" border="0" height="26"></a><a href="http://www.ryerson.ca/%7Edgrimsha/courses/cps840/Index.html#anchor1930653"><img src="threadsMonitors_files/Image5.gif" naturalsizeflag="3" width="26" align="bottom" border="0" height="26"></a>
+
+</p></body></html>

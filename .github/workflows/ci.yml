@@ -1,0 +1,20 @@
+name: Verificar exemplos
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  laboratorio:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Compilar e testar C
+        run: make test
+      - name: Compilar exemplos Java
+        run: make java
