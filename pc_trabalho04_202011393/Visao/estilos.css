@@ -1,0 +1,21 @@
+.root{
+    -fx-base: rgb(139, 0, 12);
+    -fx-background: rgb(182, 146, 146);
+}
+.button {
+    -fx-font-weight: bold;
+    -fx-font-size: 15px;
+}
+
+.label {
+    -fx-font-style: italic;
+    -fx-font-size: 17px;
+    -fx-text-fill: rgb(100, 28, 0);
+}
+
+.titulo {
+    -fx-font-style: normal;
+    -fx-font-weight: bolder;
+    -fx-font-size: 30px;
+    -fx-alignment: center;
+}
