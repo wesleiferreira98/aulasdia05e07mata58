@@ -69,3 +69,11 @@ make run-simulation
 ```
 
 A janela requer JDK 21+ e Maven; o teste do modelo não precisa de JavaFX. Use a simulação no encontro de 7/10 antes de ler o protocolo de semáforos em C.
+
+## Aula de 5/10 pronta para aplicação
+
+[Roteiro de 90 minutos](docs/aulas/dia05/ROTEIRO.md), [atividade dos alunos](docs/aulas/dia05/ATIVIDADE.md) e [gabarito](docs/aulas/dia05/GABARITO.md). Comece com fork e memória independente; apresente um pipe pequeno antes da leitura de Bhaskara.
+
+```bash
+make run-pipe-soma
+```

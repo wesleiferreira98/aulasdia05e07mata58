@@ -57,3 +57,9 @@ test-simulation:
 	java -cp $(BUILD)/simulation-tests br.edu.mata58.dinheiro.SimulationTest
 run-simulation:
 	mvn -f pc_trabalho04_202011393/pom.xml javafx:run
+
+.PHONY: run-pipe-soma
+$(BUILD)/pipe-soma: examples/dia05/pipe_soma.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
+run-pipe-soma: $(BUILD)/pipe-soma
+	./$(BUILD)/pipe-soma
