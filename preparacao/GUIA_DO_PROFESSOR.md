@@ -288,3 +288,9 @@ Antes de cada encontro: ensaie no computador do laboratório; deixe o mapa de pr
 - Espera pelo término de thread: https://www.man7.org/linux/man-pages/man3/pthread_join.3.html
 - Operação de semáforo: https://www.man7.org/linux/man-pages/man3/sem_wait.3.html
 - Contrato de wait/notify, aquisição do monitor e despertares espúrios: https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html
+
+## Demonstração visual adicional para 7/10
+
+Use [Produção de dinheiro](../pc_trabalho04_202011393/README.md) por cinco minutos antes da leitura do produtor-consumidor C, dentro do bloco de 38–53 min. Faça o buffer encher com produtor rápido e consumidor lento; depois inverta as velocidades. Peça à turma para identificar quem espera e em qual semáforo do C esperaria. Pause para discutir os dez slots e índices circulares. A nova versão usa threads Java e semáforos, não processos nem o monitor das mailboxes.
+
+Atualização da verificação Java: o compilador deste ambiente pode ser chamado por `java -m jdk.compiler/com.sun.tools.javac.Main`, embora não haja executável javac no PATH. O modelo da simulação foi compilado e testado; a interface foi compilada com bibliotecas JavaFX. A janela passou por um teste de inicialização de oito segundos; a inspeção visual e a operação dos controles permanecem etapas de ensaio no laboratório.

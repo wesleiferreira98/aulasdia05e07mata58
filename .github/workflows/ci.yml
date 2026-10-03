@@ -18,3 +18,5 @@ jobs:
         run: make test
       - name: Compilar exemplos Java
         run: make java
+      - name: Testar simulacao visual sem janela
+        run: mvn -B -f pc_trabalho04_202011393/pom.xml test

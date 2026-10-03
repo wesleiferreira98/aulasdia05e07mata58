@@ -58,3 +58,14 @@ Os exemplos Java foram preservados: a mailbox 3b tem corrida intencional; a 3s p
 ## Colaboração e autoria
 
 Leia [CONTRIBUTING.md](CONTRIBUTING.md) e [CHANGELOG.md](CHANGELOG.md). O material-base identifica Maycon Leone M. Peixoto como professor/autor; os ajustes desta pasta não alteram essa atribuição. Fontes e situação de licenciamento estão em [NOTICE.md](NOTICE.md). Ainda não foi definida uma licença de distribuição para o conjunto.
+
+## Simulação visual de produtor–consumidor
+
+[Produção de dinheiro](pc_trabalho04_202011393/README.md) moderniza o trabalho de graduação de Weslei: dez posições, velocidades independentes, pausa segura e indicação de espera por vagas ou itens.
+
+```bash
+make test-simulation
+make run-simulation
+```
+
+A janela requer JDK 21+ e Maven; o teste do modelo não precisa de JavaFX. Use a simulação no encontro de 7/10 antes de ler o protocolo de semáforos em C.

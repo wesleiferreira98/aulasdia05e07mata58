@@ -1,0 +1,10 @@
+.root { -fx-font-family: "Sans Serif"; -fx-font-size: 16px; -fx-base: #edf2f6; -fx-background: #edf2f6; }
+.title { -fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #172c46; }
+.label { -fx-text-fill: #22374d; }
+.card { -fx-background-color: white; -fx-background-radius: 14; -fx-padding: 20; }
+.slot { -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-width: 2; -fx-font-weight: bold; }
+.empty { -fx-background-color: #f1f5f9; -fx-border-color: #b4c3d1; -fx-text-fill: #53687a; }
+.occupied { -fx-background-color: #def7e9; -fx-border-color: #19865b; -fx-text-fill: #145638; }
+.button { -fx-padding: 10 24; -fx-font-weight: bold; -fx-background-radius: 8; }
+.progress-bar > .bar { -fx-background-color: #19865b; }
+.text-area { -fx-font-family: "Monospaced"; -fx-font-size: 14px; }

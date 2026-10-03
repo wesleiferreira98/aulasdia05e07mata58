@@ -10,3 +10,6 @@
 - Guia do professor para dois encontros de 90 minutos.
 - README, documentação dos exemplos, Makefile, testes e configuração de CI.
 - Modelos de issues e pull requests e registro de autoria/licenciamento.
+
+- Refatoração do trabalho Produção de dinheiro em módulo JavaFX/Maven: buffer de dez posições, snapshots, pausa cooperativa, reset e encerramento.
+- Testes independentes da interface e preservação do trabalho de 2022 em original/.
