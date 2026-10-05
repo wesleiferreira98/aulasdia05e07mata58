@@ -221,6 +221,8 @@ $ make run-pipe-soma   # filho envia 30 ao pai
 $ make run-pipe        # pipe2.c: raizes da equacao de 2o grau
 \end{lstlisting}
 
+Cada \cmd{make run-...} primeiro imprime o comando que vai executar (por exemplo, \cmd{./build/fork2}) e só depois a saída do programa. Na primeira execução aparece antes também a linha do \cmd{gcc} que compila o exemplo. As saídas mostradas nesta apostila incluem a linha do comando, mas não a do \cmd{gcc}.
+
 Os exemplos são compilados com \cmd{-std=c11 -Wall -Wextra -Wpedantic -Werror}: qualquer aviso do compilador é tratado como erro. Rode cada programa enquanto lê a seção correspondente. Os números de PID das saídas mostradas aqui vão ser diferentes na sua máquina, e isso é esperado.
 
 % ============================================================
@@ -285,6 +287,8 @@ Cada processo enxerga a sua memória como se fosse a única do computador. Essa 
     \node[left=0.3cm of texto, font=\scriptsize, color=black!60] {endereços baixos};
 \end{tikzpicture}
 \end{center}
+
+A figura é uma \textbf{visão simplificada}. Um processo real também tem regiões para bibliotecas compartilhadas e para arquivos mapeados em memória (\cmd{mmap}), e o Linux sorteia a posição de várias regiões a cada execução (ASLR, \emph{Address Space Layout Randomization}), o que dificulta ataques que dependem de endereços fixos. Para esta aula basta a organização geral: código, dados, heap e pilha.
 
 Os endereços que o programa usa são \textbf{virtuais}: o hardware e o SO traduzem cada endereço virtual para uma posição física da memória, e essa tradução é diferente para cada processo. Esse detalhe vai explicar, na Seção~\ref{sec:memoria}, por que o mesmo endereço pode guardar valores diferentes em dois processos.
 
@@ -372,6 +376,7 @@ Uma execução possível:
 
 \begin{lstlisting}[style=terminal]
 $ make run-fork-basico
+./build/fork-basico
 Antes do fork: PID 2020435
 Filho: fork retornou 0; meu PID 2020436; meu pai 2020435
 Pai: fork retornou 2020436; meu PID 2020435
@@ -400,6 +405,8 @@ Esse buffer faz parte da memória e, portanto, é copiado pelo \cmd{fork()}. Dua
 \end{enumerate}
 
 Por que então o filho usa \cmd{\_exit} e não \cmd{exit}? Porque \cmd{exit} esvaziaria também os buffers \emph{herdados} do pai e executaria funções registradas pelo pai com \cmd{atexit}. Em um filho, \cmd{\_exit} encerra apenas o que é dele.
+
+Isso não quer dizer que \cmd{return} ou \cmd{exit} no filho sejam sempre um erro. No \cmd{fork2.c} (Seção~4), todos os processos terminam com \cmd{return} ao final de \cmd{main}, e está correto: nenhum texto fica no buffer antes dos \cmd{fork()}, e só o processo original imprime. O cuidado com \cmd{\_exit} importa quando o filho termina \emph{no meio} do código do pai, como nos exemplos com pipe, ou quando há saída pendente no buffer.
 
 % ============================================================
 \section{fork() dentro de um laço}
@@ -540,6 +547,7 @@ Uma objeção comum: ``mas o endereço de \cmd{v} é o mesmo no pai e no filho''
 
 \begin{lstlisting}[style=terminal]
 $ make run-memoria
+./build/memoria-independente
 Filho: x = 99 em 0x7ffe72feea88
 Pai:   x = 10 em 0x7ffe72feea88
 \end{lstlisting}
@@ -609,7 +617,16 @@ Quando um filho termina, o SO não pode descartar tudo: o pai ainda pode querer 
 \end{tikzpicture}
 \end{center}
 
-Se o pai termina antes do filho, o filho fica \textbf{órfão} e é adotado por outro processo (normalmente o \cmd{init}/\cmd{systemd}, PID 1), que se encarrega de coletá-lo. Um zumbi que dura muito tempo é sinal de um pai que esqueceu de chamar \cmd{waitpid}.
+Se o pai termina antes do filho, o filho fica \textbf{órfão} e é adotado por outro processo, que passa a ser o seu pai e se encarrega de coletá-lo quando ele terminar. Quem adota depende do sistema:
+
+\begin{itemize}
+    \item Num servidor ou num terminal sem sessão gráfica, costuma ser o PID 1 (\cmd{init} ou \cmd{systemd}).
+    \item Numa sessão gráfica de um Linux atual, costuma ser o \cmd{systemd -{}-user} do usuário. Ele se registra como \textbf{coletor de órfãos} (\emph{subreaper}) e adota os órfãos dos processos da sessão.
+\end{itemize}
+
+Por isso, se você imprimir \cmd{getppid()} num órfão no computador do laboratório, provavelmente verá um número diferente de 1. Confira quem é com \cmd{ps -o pid,args -p <número>}.
+
+Um zumbi que dura muito tempo é sinal de um pai que esqueceu de chamar \cmd{waitpid}.
 
 \subsection{Esperar não é comunicar}
 
@@ -626,8 +643,12 @@ Libera a entrada do zumbi. & Não transporta resultados calculados. \\
 \end{center}
 
 \begin{definicao}[Ideia-chave]
-\cmd{waitpid} coordena o \textbf{término}. O código de saída tem só 8 bits e serve para indicar sucesso ou falha, não para devolver dados. Para levar um resultado do filho ao pai, os bytes precisam ser enviados explicitamente por algum mecanismo do SO.
+\cmd{waitpid} coordena o \textbf{término}. Para levar um resultado do filho ao pai, os bytes precisam ser enviados explicitamente por algum mecanismo do SO.
 \end{definicao}
+
+\begin{pergunta}[E se o filho devolvesse o 30 no código de saída?]
+Funciona: se o filho chamar \cmd{\_exit(30)}, o pai lê \cmd{WEXITSTATUS(status) == 30}. Mas o código de saída tem só \textbf{8 bits}, ou seja, valores de 0 a 255. Um \cmd{\_exit(300)} chega ao pai como 44 (300 módulo 256). Não cabe nele um número negativo, um \cmd{double}, um texto ou um vetor. Além disso, o valor só chega quando o filho \emph{termina}: um filho que precisa enviar vários resultados ao longo do tempo não tem como fazer isso. O código de saída foi pensado para dizer \emph{como} o processo terminou (0 para sucesso, outro valor para o tipo de falha), e é assim que os nossos exemplos o usam.
+\end{pergunta}
 
 % ============================================================
 \section{Comunicação entre processos com pipe}\label{sec:pipe}
@@ -871,11 +892,11 @@ O coordenador mantém as três pontas de escrita apenas para que os fornecedores
 
 O código completo está em \cmd{pipe2.c}. Os trechos abaixo concentram as ideias da aula.
 
-\lstinputlisting[style=arquivo, firstline=74, lastline=91, firstnumber=74]{\raiz/pipe2.c}
+\lstinputlisting[style=arquivo, firstline=99, lastline=120, firstnumber=99]{\raiz/pipe2.c}
 
 O calculador fecha tudo o que não usa, recebe os três valores, calcula e envia as raízes. Os fornecedores são criados num laço dentro do coordenador:
 
-\lstinputlisting[style=arquivo, firstline=93, lastline=116, firstnumber=93]{\raiz/pipe2.c}
+\lstinputlisting[style=arquivo, firstline=122, lastline=152, firstnumber=122]{\raiz/pipe2.c}
 
 Note o \cmd{for} interno no filho: cada fornecedor fecha as pontas de escrita dos \emph{outros} dois canais e fica só com a sua.
 
@@ -883,7 +904,10 @@ Note o \cmd{for} interno no filho: cada fornecedor fecha as pontas de escrita do
 
 \begin{lstlisting}[style=terminal]
 $ make run-pipe
-Digite a, b e delta (delta ja calculado): 1 -3 1
+./build/pipe2
+>>> Digite tres numeros separados por espaco e tecle Enter: a b delta
+>>> Exemplo: 1 -3 1   (delta ja calculado; o programa nao pede c)
+a b delta: 1 -3 1
 Raizes: x1 = 1; x2 = 2
 \end{lstlisting}
 
@@ -1034,8 +1058,14 @@ int main(void) { printf("A"); fork(); return 0; }
 
 \begin{itemize}
     \item Páginas de manual do Linux: \cmd{man 2 fork}, \cmd{man 2 waitpid}, \cmd{man 2 pipe} e \cmd{man 7 pipe}. Também disponíveis em \url{https://man7.org/linux/man-pages/}.
-    \item A. S. Tanenbaum e H. Bos. \emph{Sistemas Operacionais Modernos}. Capítulo 2: processos e threads.
-    \item A. Silberschatz, P. B. Galvin e G. Gagne. \emph{Fundamentos de Sistemas Operacionais}. Capítulo 3: processos e comunicação entre processos.
+    \item TANENBAUM, A. S.; BOS, H. \emph{Sistemas Operacionais Modernos}. 4. ed. São Paulo: Pearson, 2016. Capítulo 2: processos e threads.
+    \item SILBERSCHATZ, A.; GALVIN, P. B.; GAGNE, G. \emph{Fundamentos de Sistemas Operacionais}. 9. ed. Rio de Janeiro: LTC, 2015. Capítulo 3: processos, incluindo comunicação entre processos e pipes.
+\end{itemize}
+
+Em outras edições desses livros, o assunto continua nos capítulos iniciais sobre processos, mas a numeração pode mudar.
+
+\begin{itemize}
+    \item KERRISK, M. \emph{The Linux Programming Interface}. San Francisco: No Starch Press, 2010. Capítulos 24 a 26 (criação, término e espera de processos) e 44 (pipes). Referência detalhada, em inglês, escrita pelo mantenedor das páginas de manual do Linux.
 \end{itemize}
 
 \end{document}

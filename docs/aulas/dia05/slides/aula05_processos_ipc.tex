@@ -75,15 +75,15 @@
 \toprule
 \textbf{min} & \textbf{Etapa} \\
 \midrule
-0--8   & Programa e processo \\
-8--20  & Uma chamada de \texttt{fork()} \\
-20--33 & \texttt{fork()} dentro do laço: \texttt{fork2.c} \\
-33--45 & Memória independente e \texttt{waitpid} \\
-45--53 & Checagem em duplas \\
-53--65 & Pipe: canal, pontas e bloqueio \\
-65--75 & Aplicação com vários processos: \texttt{pipe2.c} \\
-75--87 & \textbf{Prática}: filho envia, pai recebe \\
-87--90 & Bilhete de saída \\
+0 a 8   & Programa e processo \\
+8 a 20  & Uma chamada de \texttt{fork()} \\
+20 a 33 & \texttt{fork()} dentro do laço: \texttt{fork2.c} \\
+33 a 45 & Memória independente e \texttt{waitpid} \\
+45 a 53 & Checagem em duplas \\
+53 a 65 & Pipe: canal, pontas e bloqueio \\
+65 a 75 & Aplicação com vários processos: \texttt{pipe2.c} \\
+75 a 87 & \textbf{Prática}: filho envia, pai recebe \\
+87 a 90 & Bilhete de saída \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -140,6 +140,56 @@ a outra \emph{necessariamente} observa a alteração?}
 \centering Anote sua hipótese. Vamos testá-la com \texttt{fork2.c}.
 \end{frame}
 
+\begin{frame}{O que o SO guarda sobre cada processo}
+Para cada processo, o núcleo mantém um registro (o \emph{bloco de controle do processo}):
+
+\vspace{0.4em}
+\begin{center}
+\small
+\begin{tabular}{@{}lp{9.6cm}@{}}
+\toprule
+\textbf{PID} & Número que identifica o processo enquanto ele existe. \\
+\textbf{PPID} & PID do processo que o criou (o pai). \\
+\textbf{Estado} & Executando, pronto, bloqueado esperando algo, terminado. \\
+\textbf{Contexto} & Registradores, incluindo onde o programa parou; salvos quando ele sai da CPU. \\
+\textbf{Memória} & O espaço de endereçamento: código, dados, heap e pilha. \\
+\textbf{Descritores} & Arquivos, terminais e pipes que o processo tem abertos. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.3em}
+\small No terminal, \texttt{ps -f} mostra PID e PPID; \texttt{pstree -p} mostra quem criou quem.
+\end{frame}
+
+\begin{frame}{A memória de um processo}
+\begin{columns}[c]
+\column{0.42\textwidth}
+\begin{tikzpicture}[node distance=0pt,
+    regiao/.style={draw=mDarkTeal, fill=mDarkTeal!6, minimum width=3.4cm, minimum height=0.62cm, font=\small}]
+    \node[regiao] (pilha) {pilha};
+    \node[regiao, below=of pilha, fill=white, minimum height=0.9cm] (livre) {\scriptsize $\downarrow$ \quad livre \quad $\uparrow$};
+    \node[regiao, below=of livre] (heap) {heap};
+    \node[regiao, below=of heap] (dados) {dados globais};
+    \node[regiao, below=of dados] (texto) {código};
+\end{tikzpicture}
+
+\column{0.56\textwidth}
+\small
+\begin{itemize}
+    \item \textbf{Pilha}: variáveis locais e chamadas de função.
+    \item \textbf{Heap}: \texttt{malloc}, \texttt{calloc}.
+    \item \textbf{Dados}: variáveis globais e \texttt{static}.
+    \item \textbf{Código}: as instruções do programa.
+\end{itemize}
+\end{columns}
+
+\vspace{0.5em}
+\begin{alertblock}{Endereços virtuais}
+Os endereços que o programa usa são \textbf{virtuais}. O SO e o hardware traduzem cada um para uma posição física, e a tradução é \textbf{diferente para cada processo}. Visão simplificada: omite bibliotecas compartilhadas e o sorteio de endereços (ASLR).
+\end{alertblock}
+\end{frame}
+
 % ============================================================
 \section{Uma chamada de fork()}
 % ============================================================
@@ -179,6 +229,32 @@ Pai e filho continuam \textbf{depois} da chamada, cada um com seu retorno.
 \end{alertblock}
 \end{frame}
 
+\begin{frame}{O que o filho recebe no \texttt{fork()}}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Igual ao pai (cópia)}
+\begin{itemize}
+    \item Toda a memória: código, globais, heap, pilha.
+    \item Valores das variáveis \emph{naquele instante}.
+    \item Registradores: continua no mesmo ponto.
+    \item Descritores abertos (arquivos, pipes).
+\end{itemize}
+
+\column{0.5\textwidth}
+\textbf{Diferente do pai}
+\begin{itemize}
+    \item PID novo.
+    \item PPID = PID do pai.
+    \item Retorno de \texttt{fork()}: \texttt{0}.
+\end{itemize}
+\end{columns}
+
+\vspace{0.6em}
+\begin{exampleblock}{Cópia na escrita (\emph{copy-on-write})}
+Pai e filho dividem as páginas até um deles escrever; só então a página é copiada. O efeito é o de uma cópia completa: \textbf{o que um escreve, o outro não vê}.
+\end{exampleblock}
+\end{frame}
+
 \begin{frame}{\texttt{getpid()} e a ordem de execução}
 \begin{itemize}
     \item \texttt{getpid()} retorna o PID do processo que \emph{está executando}.
@@ -192,6 +268,41 @@ Pai e filho continuam \textbf{depois} da chamada, cada um com seu retorno.
 \begin{exampleblock}{Resposta}
 Não. A ordem depende do escalonamento e da sincronização que o programa estabelecer.
 \end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Vendo os dois retornos: \texttt{fork\_basico.c}}
+\begin{lstlisting}[style=codigo, basicstyle=\ttfamily\scriptsize\color{termfg}]
+pid_t pid = fork();
+if (pid == 0) {
+    printf("Filho: ... meu PID %d; meu pai %d\n", getpid(), getppid());
+    fflush(stdout);  _exit(EXIT_SUCCESS);
+}
+printf("Pai: fork retornou %d; meu PID %d\n", pid, getpid());
+\end{lstlisting}
+
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+$ make run-fork-basico
+./build/fork-basico
+Antes do fork: PID 4210
+Filho: fork retornou 0; meu PID 4211; meu pai 4210
+Pai: fork retornou 4211; meu PID 4210
+Pai: filho 4211 terminou com codigo 0
+\end{lstlisting}
+
+\small O pai recebe 4211, que é o PID do filho; o pai do filho é 4210. Os PIDs mudam a cada execução.
+\end{frame}
+
+\begin{frame}{Um detalhe de C: \texttt{printf}, buffers e \texttt{\_exit}}
+\begin{itemize}
+    \item \texttt{printf} guarda o texto num \textbf{buffer na memória do processo} e só entrega ao SO depois (quebra de linha no terminal, buffer cheio ou fim do programa).
+    \item O buffer faz parte da memória, então \textbf{é copiado pelo \texttt{fork()}}: texto pendente pode sair duas vezes.
+    \item \texttt{\_exit} encerra \textbf{sem esvaziar} o buffer. \texttt{exit} e \texttt{return} esvaziam, inclusive o que foi herdado do pai.
+\end{itemize}
+
+\vspace{0.5em}
+\begin{alertblock}{Regra prática}
+\texttt{fflush(stdout)} antes do \texttt{fork()}. No filho que termina no meio do código do pai, \texttt{fflush(stdout)} e depois \texttt{\_exit}.
+\end{alertblock}
 \end{frame}
 
 % ============================================================
@@ -213,6 +324,26 @@ for (int i = 0; i < tamanho; ++i) {
 \begin{alertblock}{Dois minutos, no papel}
 Com \texttt{tamanho = 3}, quantos processos existem ao todo? Desenhe quem cria quem.
 \end{alertblock}
+\end{frame}
+
+\begin{frame}{Lendo \texttt{fork2.c} por partes}
+\small
+\begin{center}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{4.9cm}>{\raggedright\arraybackslash}p{8.1cm}@{}}
+\toprule
+\textbf{Trecho} & \textbf{O que faz} \\
+\midrule
+\texttt{calloc(tamanho, ...)} & Reserva o vetor \textbf{já zerado}: \texttt{[0, 0, 0]}. \\
+\texttt{original = getpid()} & Guarda o PID de quem começou. Os filhos herdam o número, mas só um processo tem \texttt{getpid() == original}. \\
+laço com \texttt{fork()} & Em cada volta, \textbf{todo} processo vivo chama \texttt{fork()}. O filho escreve \texttt{v[i] = i + 5}. \\
+laço com \texttt{waitpid} & Cada processo espera \textbf{os seus} filhos diretos, até não restar nenhum (\texttt{ECHILD}). \\
+\texttt{if (getpid()==original)} & Só o processo original soma o vetor e imprime. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.3em}
+\centering Pergunta-chave: \textbf{o filho sai do laço depois de nascer?} Não: ele continua as voltas que faltam.
 \end{frame}
 
 \begin{frame}{A árvore de \texttt{fork2.c}}
@@ -314,6 +445,54 @@ Soma total no pai: 0
 \end{itemize}
 \end{frame}
 
+\begin{frame}{O vetor de cada um dos oito processos}
+\begin{columns}[c]
+\column{0.5\textwidth}
+\small
+\begin{tabular}{@{}lllc@{}}
+\toprule
+\textbf{Proc.} & \textbf{Criado por} & \textbf{Vetor} & \textbf{Soma} \\
+\midrule
+original & início & \texttt{[0,0,0]} & 0 \\
+A & original, i=0 & \texttt{[5,0,0]} & 5 \\
+B & original, i=1 & \texttt{[0,6,0]} & 6 \\
+D & original, i=2 & \texttt{[0,0,7]} & 7 \\
+C & A, i=1 & \texttt{[5,6,0]} & 11 \\
+E & A, i=2 & \texttt{[5,0,7]} & 12 \\
+F & B, i=2 & \texttt{[0,6,7]} & 13 \\
+G & C, i=2 & \texttt{[5,6,7]} & \textbf{18} \\
+\bottomrule
+\end{tabular}
+
+\column{0.48\textwidth}
+\begin{itemize}
+    \item O filho herda o vetor \textbf{como estava no pai} no momento do \texttt{fork()}.
+    \item Depois escreve só a sua posição.
+    \item O 18 existe, mas só em \textbf{G}, que não é o original e não imprime.
+\end{itemize}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Mesmo endereço, valores diferentes}
+\begin{lstlisting}[style=codigo]
+int x = 10;
+pid_t pid = fork();
+if (pid == 0) { x = 99; printf("Filho: x = %d em %p\n", x, (void *)&x); ... }
+printf("Pai:   x = %d em %p\n", x, (void *)&x);   /* depois de esperar o filho */
+\end{lstlisting}
+
+\begin{lstlisting}[style=terminal]
+$ make run-memoria
+./build/memoria-independente
+Filho: x = 99 em 0x7ffe72feea88
+Pai:   x = 10 em 0x7ffe72feea88
+\end{lstlisting}
+
+\begin{alertblock}{Mesmo endereço não é mesma memória}
+O endereço é \textbf{virtual}: cada processo o interpreta no seu próprio espaço, e o SO o leva a posições físicas diferentes.
+\end{alertblock}
+\end{frame}
+
 \begin{frame}{\texttt{waitpid}: esperar não é comunicar}
 \begin{columns}[T]
 \column{0.5\textwidth}
@@ -337,6 +516,84 @@ Soma total no pai: 0
 \begin{alertblock}{Por que a soma não virou 18?}
 O pai já espera os filhos, mas esperar coordena o \emph{término}. Nem \texttt{sleep} nem \texttt{waitpid} tornam o heap compartilhado.
 \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{\texttt{waitpid} na prática}
+\begin{lstlisting}[style=codigo]
+pid_t waitpid(pid_t pid, int *status, int opcoes);
+\end{lstlisting}
+
+\begin{columns}[T]
+\column{0.48\textwidth}
+\small
+\begin{itemize}
+    \item \texttt{pid > 0}: espera esse filho; \texttt{-1}: qualquer filho.
+    \item \texttt{opcoes = 0}: \textbf{bloqueia} até um filho terminar.
+    \item Devolve o PID coletado ou \texttt{-1}.
+    \item \texttt{EINTR}: interrompido por sinal, chame de novo.
+    \item \texttt{ECHILD}: não há mais filhos.
+\end{itemize}
+
+\column{0.5\textwidth}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Macro} & \textbf{Responde} \\
+\midrule
+\texttt{WIFEXITED(st)} & Terminou normalmente? \\
+\texttt{WEXITSTATUS(st)} & Com que código? \\
+\texttt{WIFSIGNALED(st)} & Morto por sinal? \\
+\texttt{WTERMSIG(st)} & Qual sinal? \\
+\bottomrule
+\end{tabular}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Zumbis e órfãos}
+\begin{center}
+\begin{tikzpicture}[node distance=1.3cm]
+    \node[proc] (exec) {executando};
+    \node[destaque, right=of exec] (zumbi) {zumbi};
+    \node[proc, right=of zumbi, fill=white] (fim) {removido};
+    \draw[seta] (exec) -- node[rotulo, above] {termina} (zumbi);
+    \draw[seta] (zumbi) -- node[rotulo, above] {pai coleta} (fim);
+\end{tikzpicture}
+\end{center}
+
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Zumbi}\\
+\small Terminou, mas o pai ainda não coletou. Fica na tabela de processos (estado \texttt{Z} no \texttt{ps}) guardando o código de saída.
+
+\column{0.5\textwidth}
+\textbf{Órfão}\\
+\small O pai terminou antes. Outro processo adota e coleta: o PID 1 num servidor, ou o \texttt{systemd -{}-user} numa sessão gráfica.
+\end{columns}
+
+\vspace{0.6em}
+\begin{alertblock}{Por que coletar?}
+Um pai que nunca chama \texttt{waitpid} acumula zumbis.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{E se o filho devolvesse o 30 no código de saída?}
+\begin{lstlisting}[style=codigo]
+_exit(30);                     /* no filho */
+WEXITSTATUS(status) == 30      /* no pai: funciona! */
+\end{lstlisting}
+
+\pause
+\textbf{Mas não serve como canal de dados:}
+\begin{itemize}
+    \item Só \textbf{8 bits}: valores de 0 a 255. \texttt{\_exit(300)} chega como \texttt{44}.
+    \item Não cabe número negativo, \texttt{double}, texto ou vetor.
+    \item Só chega quando o filho \textbf{termina}: um único valor, no fim.
+\end{itemize}
+
+\vspace{0.4em}
+\begin{exampleblock}{Para que serve}
+Dizer \emph{como} o processo terminou: \texttt{0} é sucesso, outro valor indica o tipo de falha.
+\end{exampleblock}
 \end{frame}
 
 \begin{frame}{Checagem em duplas \hfill \normalsize 5 minutos}
@@ -396,6 +653,39 @@ O pai já espera os filhos, mas esperar coordena o \emph{término}. Nem \texttt{
 \end{alertblock}
 \end{frame}
 
+\begin{frame}{A tabela de descritores depois do \texttt{fork()}}
+\begin{center}
+\begin{tikzpicture}[
+    tab/.style={draw=mDarkTeal, minimum width=1.9cm, minimum height=0.5cm, font=\ttfamily\scriptsize, fill=white},
+    tabx/.style={tab, fill=black!8, text=black!45}]
+    \node[font=\small\bfseries] at (0,2.25) {Filho};
+    \node[tab] (f0) at (0,1.7) {0 entrada};
+    \node[tab, below=0pt of f0] (f1) {1 saída};
+    \node[tab, below=0pt of f1] (f2) {2 erros};
+    \node[tabx, below=0pt of f2] (f3) {3 fechado};
+    \node[tab, below=0pt of f3, fill=mLightBrown!15] (f4) {4 = fd[1]};
+    \node[font=\small\bfseries] at (9,2.25) {Pai};
+    \node[tab] (p0) at (9,1.7) {0 entrada};
+    \node[tab, below=0pt of p0] (p1) {1 saída};
+    \node[tab, below=0pt of p1] (p2) {2 erros};
+    \node[tab, below=0pt of p2, fill=mLightBrown!15] (p3) {3 = fd[0]};
+    \node[tabx, below=0pt of p3] (p4) {4 fechado};
+    \node[draw=mLightBrown, fill=mLightBrown!12, thick, minimum width=3cm, minimum height=0.7cm, font=\small]
+        (pipe) at (4.5,-0.2) {buffer do pipe};
+    \node[font=\scriptsize, color=black!60, below=0.05cm of pipe] {núcleo do SO};
+    \draw[setad] (f4.east) -- node[rotulo, above, sloped] {escreve} (pipe.west);
+    \draw[setad] (pipe.east) -- node[rotulo, above, sloped] {lê} (p3.west);
+\end{tikzpicture}
+\end{center}
+
+\small
+\begin{itemize}
+    \item \texttt{0}, \texttt{1} e \texttt{2} já vêm abertos; por isso o pipe costuma receber \texttt{3} e \texttt{4}.
+    \item O \texttt{fork()} copia a tabela: as duas cópias apontam para o \textbf{mesmo} pipe do núcleo.
+    \item Pipe criado \textbf{depois} do \texttt{fork()}: cada um teria o seu, sem canal em comum.
+\end{itemize}
+\end{frame}
+
 \begin{frame}[fragile]{O exemplo pequeno: \texttt{pipe\_soma.c}}
 \begin{lstlisting}[style=codigo]
 if (pid == 0) {                                   /* filho */
@@ -411,6 +701,25 @@ close(fd[0]);
 \end{lstlisting}
 
 \small \texttt{transferir} chama \texttt{write} (modo 1) ou \texttt{read} (modo 0) até mover todos os bytes.
+\end{frame}
+
+\begin{frame}[fragile]{Por dentro do helper \texttt{transferir}}
+\begin{lstlisting}[style=codigo]
+while (tamanho > 0) {
+    ssize_t n = modo ? write(fd, p, tamanho) : read(fd, p, tamanho);
+    if (n < 0 && errno == EINTR) continue;    /* interrompido: tenta de novo */
+    if (n < 0) return -1;                     /* erro de verdade */
+    if (n == 0) return -1;                    /* canal fechado antes do fim */
+    p += n;                                   /* avanca no dado */
+    tamanho -= (size_t)n;                     /* quanto ainda falta */
+}
+\end{lstlisting}
+
+\small
+\begin{itemize}
+    \item \texttt{read} e \texttt{write} podem mover \textbf{menos bytes} do que o pedido; por isso o laço.
+    \item Na prática vocês \textbf{usam} o helper; o foco é quem fecha qual ponta, quem envia e quem recebe.
+\end{itemize}
 \end{frame}
 
 \begin{frame}{O mesmo \texttt{\&valor}, duas variáveis}
@@ -443,6 +752,28 @@ Vazio, todas as escritas fechadas & Retorna \texttt{0}: \textbf{EOF} \\
 \begin{alertblock}{Por isso fechamos pontas}
 Enquanto houver \emph{qualquer} ponta de escrita aberta, inclusive uma cópia herdada esquecida, um pipe vazio não sinaliza EOF.
 \end{alertblock}
+\end{frame}
+
+\begin{frame}{E do lado de quem escreve?}
+\begin{center}
+\small
+\begin{tabular}{@{}p{5.6cm}p{7.2cm}@{}}
+\toprule
+\textbf{Situação} & \textbf{O que \texttt{write} faz} \\
+\midrule
+Há espaço no buffer do pipe & Copia os bytes e retorna. \\
+Buffer cheio (64\,KiB no Linux) & \textbf{Bloqueia} até o leitor consumir. \\
+Nenhuma ponta de leitura aberta & Sinal \texttt{SIGPIPE}: encerra o processo. Se ignorado, \texttt{-1} com \texttt{EPIPE}. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.5em}
+\begin{itemize}
+    \item Escritas de até \texttt{PIPE\_BUF} bytes (4096 no Linux) são \textbf{atômicas}: não se misturam com as de outro processo.
+    \item Um \texttt{int} cabe com folga.
+    \item \texttt{pipe2.c} ignora \texttt{SIGPIPE} para poder tratar o erro em vez de morrer.
+\end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]{Executando o exemplo}
@@ -506,10 +837,35 @@ Os fornecedores são filhos do coordenador, mas enviam ao calculador. Quem escre
 \end{alertblock}
 \end{frame}
 
+\begin{frame}{\texttt{pipe2.c}: cada processo fica só com as pontas que usa}
+\begin{center}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Processo} & \textbf{Lê de} & \textbf{Escreve em} \\
+\midrule
+Pai & \texttt{canais[3]}, \texttt{canais[4]} & nenhum \\
+Calculador & \texttt{canais[0]}, \texttt{[1]}, \texttt{[2]} & \texttt{canais[3]}, \texttt{[4]} \\
+Coordenador & nenhum & \texttt{canais[0]}, \texttt{[1]}, \texttt{[2]}, só até criar os fornecedores \\
+Fornecedor \texttt{i} & nenhum & \texttt{canais[i]} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\small \texttt{fechar\_exceto} fecha todas as pontas, menos as indicadas. O coordenador guarda as de escrita só para os fornecedores herdarem, e logo depois fecha.
+
+\begin{alertblock}{Por que tanto cuidado?}
+Uma ponta de escrita esquecida aberta impede o EOF: o calculador poderia esperar para sempre.
+\end{alertblock}
+\end{frame}
+
 \begin{frame}[fragile]{Executando \texttt{pipe2.c}}
 \begin{lstlisting}[style=terminal]
 $ make run-pipe
-Digite a, b e delta (delta ja calculado): 1 -3 1
+./build/pipe2
+>>> Digite tres numeros separados por espaco e tecle Enter: a b delta
+>>> Exemplo: 1 -3 1   (delta ja calculado; o programa nao pede c)
+a b delta: 1 -3 1
 Raizes: x1 = 1; x2 = 2
 \end{lstlisting}
 
@@ -545,7 +901,33 @@ int resultado = @/* 5: receber valor pelo helper transferir */@;
 close(@/* 6: ponta usada pelo pai */@);
 \end{lstlisting}
 
-\small \texttt{transferir(descritor, endereço, bytes, modo)} — modo \texttt{1} envia, \texttt{0} recebe.
+\small \texttt{transferir(descritor, endereço, bytes, modo)}: modo \texttt{1} envia, modo \texttt{0} recebe.
+\end{frame}
+
+\begin{frame}{Antes de preencher: perguntas que guiam cada lacuna}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{No filho}
+\begin{enumerate}
+    \item O filho só \textbf{escreve}. Qual ponta ele nunca usa?
+    \item Qual conta ele precisa fazer?
+    \item Envie \texttt{valor}: qual descritor, qual endereço, quantos bytes, qual modo?
+\end{enumerate}
+
+\column{0.5\textwidth}
+\textbf{No pai}
+\begin{enumerate}
+    \setcounter{enumi}{3}
+    \item O pai só \textbf{lê}. Qual ponta ele nunca usa?
+    \item Receba em \texttt{valor}: qual descritor, endereço, bytes e modo?
+    \item Terminou de ler: qual ponta falta fechar?
+\end{enumerate}
+\end{columns}
+
+\vspace{0.6em}
+\begin{alertblock}{Confira}
+Endereço é \texttt{\&valor} (não \texttt{valor}); tamanho é \texttt{sizeof valor}; \texttt{fd[0]} lê, \texttt{fd[1]} escreve.
+\end{alertblock}
 \end{frame}
 
 \begin{frame}[fragile]{Compilar e conferir}
@@ -579,6 +961,25 @@ Resultado recebido: 30
 \section{Fechamento}
 % ============================================================
 
+\begin{frame}{Erros comuns}
+\begin{center}
+\small
+\begin{tabular}{@{}p{4.6cm}p{8.4cm}@{}}
+\toprule
+\textbf{Se você pensou\ldots} & \textbf{Reveja\ldots} \\
+\midrule
+``O pai soma 18.'' & Em qual processo cada atribuição acontece? Memórias separadas. \\
+``São quatro processos.'' & O filho não sai do laço: ele também chama \texttt{fork()}. \\
+``\texttt{waitpid} compartilha memória.'' & Esperar o término não transporta bytes. \\
+``\texttt{read} sempre recebe tudo.'' & O retorno diz quantos bytes chegaram. \\
+``Pipe vazio sempre dá EOF.'' & Ainda há alguma ponta de escrita aberta? \\
+``Mesmo endereço, mesma memória.'' & O endereço é virtual, interpretado em cada processo. \\
+``O filho recomeça o \texttt{main}.'' & Ele continua logo depois do \texttt{fork()}. \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{frame}
+
 \begin{frame}{Síntese}
 \begin{center}
 \begin{tabular}{@{}lp{9.5cm}@{}}
@@ -603,6 +1004,43 @@ Threads \textbf{compartilham} memória. O problema muda: como controlar o acesso
 \vspace{1em}
 {\Large Por que \texttt{waitpid} não resolve a comunicação\\[0.2em] do resultado e \texttt{pipe} resolve?}
 \end{center}
+\end{frame}
+
+\begin{frame}{Glossário}
+\small
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Processo}: programa em execução, com memória e recursos próprios.\\[0.35em]
+\textbf{PID / PPID}: número do processo / do seu pai.\\[0.35em]
+\textbf{\texttt{fork()}}: cria um filho, cópia do pai.\\[0.35em]
+\textbf{\texttt{waitpid()}}: espera um filho terminar e o coleta.\\[0.35em]
+\textbf{Zumbi}: terminou, mas ainda não foi coletado.\\[0.35em]
+\textbf{Órfão}: o pai terminou antes; outro processo adota.
+
+\column{0.5\textwidth}
+\textbf{IPC}: comunicação entre processos.\\[0.35em]
+\textbf{Pipe}: canal de bytes de mão única, mantido pelo SO.\\[0.35em]
+\textbf{Descritor}: número que o processo usa para um recurso aberto.\\[0.35em]
+\textbf{\texttt{fd[0]} / \texttt{fd[1]}}: ponta de leitura / de escrita.\\[0.35em]
+\textbf{Bloquear}: o processo dorme até a condição mudar.\\[0.35em]
+\textbf{EOF}: \texttt{read} devolve 0; não há mais quem escreva.
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Para estudar depois}
+\textbf{Rode os exemplos} (na raiz do repositório):
+\begin{lstlisting}[style=terminal]
+make run-fork-basico    make run-fork    make run-memoria
+make run-pipe-soma      make run-pipe    # digite 1 -3 1
+\end{lstlisting}
+
+\textbf{Leia}
+\begin{itemize}
+    \item A \textbf{apostila} da aula: os mesmos temas, explicados com mais calma, e exercícios com respostas.
+    \item \texttt{man 2 fork}, \texttt{man 2 waitpid}, \texttt{man 2 pipe}, \texttt{man 7 pipe}.
+    \item Tanenbaum e Bos, \emph{Sistemas Operacionais Modernos}, cap. 2.
+    \item Silberschatz, Galvin e Gagne, \emph{Fundamentos de Sistemas Operacionais}, cap. 3.
+\end{itemize}
 \end{frame}
 
 \begin{frame}{Obrigado!}

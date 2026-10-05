@@ -49,7 +49,7 @@ Os nomes e caminhos do material fornecido foram preservados para manter as refer
 
 ## Verificação e limites
 
-`make test` compila C11 com avisos tratados como erros e verifica soma do pai, raízes, rejeição de entradas inválidas, contador protegido e entrega FIFO de 40 itens. A integração contínua repete os testes e compila os exemplos Java.
+`make test` compila C11 com avisos tratados como erros e verifica os retornos de fork, o mesmo endereço com valores diferentes, a soma do pai, o valor enviado pelo pipe pequeno, as raízes, rejeição de entradas inválidas, contador protegido e entrega FIFO de 40 itens. A integração contínua repete os testes e compila os exemplos Java.
 
 Peterson usa atomics com ordenação sequencialmente consistente para dois participantes e espera ocupada. É uma demonstração didática. Testes não constituem prova geral de correção concorrente.
 

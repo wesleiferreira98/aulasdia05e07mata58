@@ -2,7 +2,8 @@ CC = gcc
 CFLAGS = -std=c11 -Wall -Wextra -Wpedantic -Werror -O2
 BUILD = build
 MONITOR = Monitor-20261002T192224Z-1-001/Monitor
-PROGRAMS = $(BUILD)/fork2 $(BUILD)/pipe2 $(BUILD)/peterson $(BUILD)/prod_cons
+PROGRAMS = $(BUILD)/fork2 $(BUILD)/pipe2 $(BUILD)/peterson $(BUILD)/prod_cons \
+           $(BUILD)/pipe-soma $(BUILD)/fork-basico $(BUILD)/memoria-independente
 
 .PHONY: all test java run-fork run-pipe run-peterson run-prod-cons run-java-3b run-java-3s
 all: $(PROGRAMS)

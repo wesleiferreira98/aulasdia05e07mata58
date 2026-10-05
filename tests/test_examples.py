@@ -20,6 +20,30 @@ class ExamplesTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "Soma total no pai: 0\n")
 
+    def test_fork_basico_both_returns(self):
+        result = run("fork-basico")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        filho = re.search(r"Filho: fork retornou 0; meu PID (\d+); meu pai (\d+)", result.stdout)
+        pai = re.search(r"Pai: fork retornou (\d+); meu PID (\d+)", result.stdout)
+        self.assertTrue(filho and pai, result.stdout)
+        self.assertEqual(filho.group(1), pai.group(1))
+        self.assertEqual(filho.group(2), pai.group(2))
+        self.assertIn(f"Pai: filho {pai.group(1)} terminou com codigo 0", result.stdout)
+        self.assertEqual(result.stdout.count("Antes do fork"), 1)
+
+    def test_memoria_same_address_different_values(self):
+        result = run("memoria-independente")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        filho = re.search(r"Filho: x = 99 em (\S+)", result.stdout)
+        pai = re.search(r"Pai:   x = 10 em (\S+)", result.stdout)
+        self.assertTrue(filho and pai, result.stdout)
+        self.assertEqual(filho.group(1), pai.group(1))
+
+    def test_pipe_soma_child_sends_to_parent(self):
+        result = run("pipe-soma")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "Resultado recebido: 30\n")
+
     def test_pipe_roots(self):
         for data, roots in [
             ("1 -3 1\n", "x1 = 1; x2 = 2"),
