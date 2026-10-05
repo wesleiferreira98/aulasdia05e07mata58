@@ -44,6 +44,11 @@ class ExamplesTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "Resultado recebido: 30\n")
 
+    def test_activity_answer_matches_solution(self):
+        result = run("pipe-soma-resposta")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "Resultado recebido: 30\n")
+
     def test_pipe_roots(self):
         for data, roots in [
             ("1 -3 1\n", "x1 = 1; x2 = 2"),

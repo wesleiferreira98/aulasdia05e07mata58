@@ -58,6 +58,16 @@
     celula/.style={draw=mDarkTeal, minimum size=0.75cm, font=\ttfamily\small, fill=white}
 }
 
+% Revelar partes de uma figura TikZ aos poucos (overlays do beamer).
+% visible on=<2->  : o elemento ocupa espaço sempre, mas só aparece a partir do slide 2;
+% alt=<2>{a}{b}    : usa o estilo a no slide 2 e o estilo b nos demais.
+\tikzset{
+    invisivel/.style={opacity=0, text opacity=0},
+    visible on/.style={alt={#1{}{invisivel}}},
+    alt/.code args={<#1>#2#3}{\alt<#1>{\pgfkeysalso{#2}}{\pgfkeysalso{#3}}},
+    novo/.style={draw=mLightBrown, fill=mLightBrown!25, very thick}
+}
+
 \title{Processos e comunicação entre processos}
 \subtitle{fork, memória independente e pipe na prática}
 \author{Weslei Ferreira Santos}
@@ -346,40 +356,61 @@ laço com \texttt{waitpid} & Cada processo espera \textbf{os seus} filhos direto
 \centering Pergunta-chave: \textbf{o filho sai do laço depois de nascer?} Não: ele continua as voltas que faltam.
 \end{frame}
 
-\begin{frame}{A árvore de \texttt{fork2.c}}
-\begin{columns}[c]
+\begin{frame}{A árvore de \texttt{fork2.c}, volta a volta}
+\begin{columns}[T]
 \column{0.62\textwidth}
-\begin{tikzpicture}[x=1.3cm, y=1.05cm]
-    \node[destaque] (p0) at (0,0) {original};
-    \node[procf] (a) at (2,0) {A};
-    \node[procf] (c) at (3.5,0) {C};
-    \node[procf] (g) at (5,0) {G};
-    \node[procf] (e) at (3.5,-1) {E};
-    \node[procf] (b) at (2,-2) {B};
-    \node[procf] (f) at (3.5,-2) {F};
-    \node[procf] (d) at (2,-3) {D};
-    \draw[seta] (p0) -- node[rotulo, above] {i=0} (a);
-    \draw[seta] (a) -- node[rotulo, above] {i=1} (c);
-    \draw[seta] (c) -- node[rotulo, above] {i=2} (g);
-    \draw[seta] (a.south) |- node[rotulo, pos=0.75, above] {i=2} (e.west);
-    \draw[seta] (p0.south) |- node[rotulo, pos=0.8, above] {i=1} (b.west);
-    \draw[seta] (b) -- node[rotulo, above] {i=2} (f);
-    \draw[seta] (p0.south) ++(-0.3,0) |- node[rotulo, pos=0.8, above] {i=2} (d.west);
+\begin{tikzpicture}[x=1.15cm, y=1.05cm, procf/.append style={minimum width=0.8cm},
+    vet/.style={font=\tiny\ttfamily, text=mDarkTeal, inner sep=1pt}]
+    % Etapa 1: antes do laço, só o original
+    \node[proc, minimum width=1.6cm] (p0) at (0,0) {original};
+    % Etapa 2 (i = 0): o original cria A
+    \node[procf, visible on=<2->, alt=<2>{novo}{}] (a) at (2,0) {A};
+    \draw[seta, visible on=<2->] (p0) -- node[rotulo, above, visible on=<2->] {i=0} (a);
+    % Etapa 3 (i = 1): original cria B; A cria C
+    \node[procf, visible on=<3->, alt=<3>{novo}{}] (c) at (3.5,0) {C};
+    \node[procf, visible on=<3->, alt=<3>{novo}{}] (b) at (2,-2) {B};
+    \draw[seta, visible on=<3->] (a) -- node[rotulo, above, visible on=<3->] {i=1} (c);
+    \draw[seta, visible on=<3->] (p0.south) |- node[rotulo, pos=0.8, above, visible on=<3->] {i=1} (b.west);
+    % Etapa 4 (i = 2): original cria D; A cria E; B cria F; C cria G
+    \node[procf, visible on=<4->, alt=<4>{novo}{}] (g) at (5,0) {G};
+    \node[procf, visible on=<4->, alt=<4>{novo}{}] (e) at (3.5,-1) {E};
+    \node[procf, visible on=<4->, alt=<4>{novo}{}] (f) at (3.5,-2) {F};
+    \node[procf, visible on=<4->, alt=<4>{novo}{}] (d) at (2,-3) {D};
+    \draw[seta, visible on=<4->] (c) -- node[rotulo, above, visible on=<4->] {i=2} (g);
+    \draw[seta, visible on=<4->] (a.south) |- node[rotulo, pos=0.75, above, visible on=<4->] {i=2} (e.west);
+    \draw[seta, visible on=<4->] (b) -- node[rotulo, above, visible on=<4->] {i=2} (f);
+    \draw[seta, visible on=<4->] (p0.south) ++(-0.3,0) |- node[rotulo, pos=0.8, above, visible on=<4->] {i=2} (d.west);
+    % Etapa 5: o vetor v de cada processo ao final
+    \node[vet, above=1pt of p0, visible on=<5>] {[0,0,0]};
+    \node[vet, above=1pt of a, visible on=<5>] {[5,0,0]};
+    \node[vet, above=1pt of c, visible on=<5>] {[5,6,0]};
+    \node[vet, above=1pt of b, visible on=<5>] {[0,6,0]};
+    \node[vet, right=2pt of g, visible on=<5>] {[5,6,7]};
+    \node[vet, right=2pt of e, visible on=<5>] {[5,0,7]};
+    \node[vet, right=2pt of f, visible on=<5>] {[0,6,7]};
+    \node[vet, right=2pt of d, visible on=<5>] {[0,0,7]};
 \end{tikzpicture}
 
+\vspace{0.2em}
+{\scriptsize \textcolor{mLightBrown}{\textbf{laranja}}: processos que nasceram nesta volta}
+
 \column{0.36\textwidth}
-\textbf{Caminhos ao fim de cada iteração}
+\textbf{Processos ao fim de cada volta}
 \begin{itemize}
-    \item início: \textbf{1}
-    \pause
-    \item \texttt{i=0}: \textbf{2}
-    \pause
-    \item \texttt{i=1}: \textbf{4}
-    \pause
-    \item \texttt{i=2}: \textbf{8}
+    \item<1-> início: \textbf{1}
+    \item<2-> \texttt{i=0}: \textbf{2} \hfill {\scriptsize +A}
+    \item<3-> \texttt{i=1}: \textbf{4} \hfill {\scriptsize +B, C}
+    \item<4-> \texttt{i=2}: \textbf{8} \hfill {\scriptsize +D, E, F, G}
 \end{itemize}
-\pause
-\small Todos continuam o laço: \textbf{8 processos} ao todo, \textbf{7 novos}, $1+2+4=7$ chamadas executadas.
+
+\vspace{0.4em}
+\small
+\only<1>{Antes do laço existe só o processo \textbf{original}.}%
+\only<2>{O original chama \texttt{fork()} e nasce \textbf{A}. A escreve \texttt{v[0] = 5} na \emph{sua} cópia.}%
+\only<3>{Original \textbf{e A} chamam \texttt{fork()}: A também continua o laço! Nascem \textbf{B} e \textbf{C}.}%
+\only<4>{Os quatro chamam \texttt{fork()}, em qualquer ordem. Nascem \textbf{D, E, F e G}.}%
+\only<5>{\textbf{8 processos}, 7 novos. O código tem \textbf{uma} chamada de \texttt{fork()}; a árvore executou $1+2+4=7$.\\[0.3em]
+Ao lado de cada um, o seu vetor \texttt{v}: o 18 só existe em G.}
 \end{columns}
 \end{frame}
 

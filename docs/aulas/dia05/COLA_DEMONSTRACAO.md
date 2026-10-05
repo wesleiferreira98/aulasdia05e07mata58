@@ -7,10 +7,10 @@ Todos os comandos são executados **na raiz do repositório**. Os PIDs mudam a c
 ```bash
 cd ~/Downloads/aulasdia05e07mata58
 rm -rf build     # apaga executáveis antigos e começa do zero
-make test        # compila tudo e roda 8 testes
+make test        # compila tudo e roda 9 testes
 ```
 
-Esperado no final: `Ran 8 tests ... OK`. Se passou, todas as demonstrações abaixo vão funcionar.
+Esperado no final: `Ran 9 tests ... OK`. Se passou, todas as demonstrações abaixo vão funcionar.
 
 Deixe dois terminais abertos na raiz do repositório: um para mostrar o código, outro para executar.
 

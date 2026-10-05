@@ -3,7 +3,8 @@ CFLAGS = -std=c11 -Wall -Wextra -Wpedantic -Werror -O2
 BUILD = build
 MONITOR = Monitor-20261002T192224Z-1-001/Monitor
 PROGRAMS = $(BUILD)/fork2 $(BUILD)/pipe2 $(BUILD)/peterson $(BUILD)/prod_cons \
-           $(BUILD)/pipe-soma $(BUILD)/fork-basico $(BUILD)/memoria-independente
+           $(BUILD)/pipe-soma $(BUILD)/fork-basico $(BUILD)/memoria-independente \
+           $(BUILD)/pipe-soma-resposta
 
 .PHONY: all test java run-fork run-pipe run-peterson run-prod-cons run-java-3b run-java-3s
 all: $(PROGRAMS)
@@ -74,3 +75,9 @@ run-fork-basico: $(BUILD)/fork-basico
 	./$(BUILD)/fork-basico
 run-memoria: $(BUILD)/memoria-independente
 	./$(BUILD)/memoria-independente
+
+.PHONY: run-resposta
+$(BUILD)/pipe-soma-resposta: examples/dia05/pipe_soma_atividade_resposta.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
+run-resposta: $(BUILD)/pipe-soma-resposta
+	./$(BUILD)/pipe-soma-resposta

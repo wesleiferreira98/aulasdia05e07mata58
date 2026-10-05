@@ -1,8 +1,8 @@
-# Atividade — 5/10/2026 · processos e IPC
+# Atividade de 5/10/2026 · processos e IPC
 
 Nome(s): _____________________________________
 
-## Parte 1 — previsão e explicação (em duplas)
+## Parte 1: previsão e explicação (em duplas)
 
 Considere fork2.c corrigido: vetor zerado com calloc, três iterações, todos os processos continuam o laço e somente o original imprime. Suponha que todas as criações tenham sucesso.
 
@@ -11,7 +11,7 @@ Considere fork2.c corrigido: vetor zerado com calloc, três iterações, todos o
 3. O filho altera v[i]. Qual soma o pai imprime? Explique o papel do espaço de memória de cada processo.
 4. O pai espera os filhos terminarem. Isso faz o vetor dele receber as escritas dos filhos? Justifique.
 
-## Parte 2 — prática (em duplas)
+## Parte 2: prática (em duplas)
 
 Abra `examples/dia05/pipe_soma_atividade.c`. Complete as seis lacunas para:
 
@@ -35,6 +35,6 @@ Explique:
 6. Se o pai executar read antes da escrita do filho, precisa haver erro? Quando pode esperar? Quando pode encontrar EOF?
 7. Por que os dois processos fecham pontas diferentes?
 
-## Bilhete de saída — individual
+## Bilhete de saída (individual)
 
 Em duas ou três frases: **por que waitpid não resolve a comunicação do resultado e pipe resolve?**

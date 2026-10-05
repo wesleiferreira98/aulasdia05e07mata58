@@ -1,4 +1,4 @@
-# Gabarito do professor — 5/10
+# Gabarito do professor: aula de 5/10
 
 ## Questões
 
@@ -19,9 +19,9 @@
 5. `transferir(fd[0], &valor, sizeof valor, 0)`
 6. `fd[0]`
 
-O programa completo está em [pipe_soma.c](../../../examples/dia05/pipe_soma.c). O helper contém read e write; explique as operações antes de distribuir a atividade. O exercício foca o protocolo, não a implementação de I/O completo.
+A resposta comentada, lacuna por lacuna, com o motivo de cada resposta e o que acontece nos erros comuns, está em [pipe_soma_atividade_resposta.c](../../../examples/dia05/pipe_soma_atividade_resposta.c) (`make run-resposta`). O programa completo está em [pipe_soma.c](../../../examples/dia05/pipe_soma.c). O helper contém read e write; explique as operações antes de distribuir a atividade. O exercício foca o protocolo, não a implementação de I/O completo.
 
-## Critério de correção sugerido — 10 pontos
+## Critério de correção sugerido (10 pontos)
 
 | Evidência | Pontos |
 |---|---:|
