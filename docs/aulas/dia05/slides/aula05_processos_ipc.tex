@@ -280,6 +280,31 @@ Não. A ordem depende do escalonamento e da sincronização que o programa estab
 \end{exampleblock}
 \end{frame}
 
+\begin{frame}[fragile]{Antes de rodar: compilando com o \texttt{gcc}}
+\begin{lstlisting}[style=terminal]
+$ gcc -Wall -Wextra fork2.c -o fork2       # compila: gera o executavel fork2
+$ ./fork2                                  # executa o programa da pasta atual
+\end{lstlisting}
+
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}>{\ttfamily}lp{10cm}@{}}
+\toprule
+\textrm{\textbf{Parte}} & \textbf{O que significa} \\
+\midrule
+gcc & O compilador de C: transforma o código-fonte em executável. \\
+-Wall -Wextra & Liga os avisos. Leia-os: quase sempre apontam um erro. \\
+fork2.c & O arquivo de código-fonte. \\
+-o fork2 & Nome do executável gerado (sem \texttt{-o}, vira \texttt{a.out}). \\
+-lm & Biblioteca matemática; só o \texttt{pipe2.c} precisa (\texttt{sqrt}). \\
+./fork2 & Executa o programa; \texttt{./} quer dizer ``desta pasta''. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\footnotesize Na prática: \texttt{-std=c11} (padrão C11), \texttt{-Wpedantic} (portabilidade), \texttt{-Werror} (aviso vira erro).
+\end{frame}
+
 \begin{frame}[fragile]{Vendo os dois retornos: \texttt{fork\_basico.c}}
 \begin{lstlisting}[style=codigo, basicstyle=\ttfamily\scriptsize\color{termfg}]
 pid_t pid = fork();
@@ -291,8 +316,8 @@ printf("Pai: fork retornou %d; meu PID %d\n", pid, getpid());
 \end{lstlisting}
 
 \begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
-$ make run-fork-basico
-./build/fork-basico
+$ gcc -Wall -Wextra examples/dia05/fork_basico.c -o fork-basico
+$ ./fork-basico
 Antes do fork: PID 4210
 Filho: fork retornou 0; meu PID 4211; meu pai 4210
 Pai: fork retornou 4211; meu PID 4210
@@ -443,8 +468,8 @@ Cada filho escreve em \texttt{v[i]}. O pai soma o vetor no final.
 
 \pause
 \begin{lstlisting}[style=terminal]
-$ make run-fork
-./build/fork2
+$ gcc -Wall -Wextra fork2.c -o fork2
+$ ./fork2
 Soma total no pai: 0
 \end{lstlisting}
 \end{frame}
@@ -513,8 +538,8 @@ printf("Pai:   x = %d em %p\n", x, (void *)&x);   /* depois de esperar o filho *
 \end{lstlisting}
 
 \begin{lstlisting}[style=terminal]
-$ make run-memoria
-./build/memoria-independente
+$ gcc -Wall -Wextra examples/dia05/memoria_independente.c -o memoria
+$ ./memoria
 Filho: x = 99 em 0x7ffe72feea88
 Pai:   x = 10 em 0x7ffe72feea88
 \end{lstlisting}
@@ -605,26 +630,6 @@ pid_t waitpid(pid_t pid, int *status, int opcoes);
 \begin{alertblock}{Por que coletar?}
 Um pai que nunca chama \texttt{waitpid} acumula zumbis.
 \end{alertblock}
-\end{frame}
-
-\begin{frame}[fragile]{E se o filho devolvesse o 30 no código de saída?}
-\begin{lstlisting}[style=codigo]
-_exit(30);                     /* no filho */
-WEXITSTATUS(status) == 30      /* no pai: funciona! */
-\end{lstlisting}
-
-\pause
-\textbf{Mas não serve como canal de dados:}
-\begin{itemize}
-    \item Só \textbf{8 bits}: valores de 0 a 255. \texttt{\_exit(300)} chega como \texttt{44}.
-    \item Não cabe número negativo, \texttt{double}, texto ou vetor.
-    \item Só chega quando o filho \textbf{termina}: um único valor, no fim.
-\end{itemize}
-
-\vspace{0.4em}
-\begin{exampleblock}{Para que serve}
-Dizer \emph{como} o processo terminou: \texttt{0} é sucesso, outro valor indica o tipo de falha.
-\end{exampleblock}
 \end{frame}
 
 \begin{frame}{Checagem em duplas \hfill \normalsize 5 minutos}
@@ -809,8 +814,8 @@ Nenhuma ponta de leitura aberta & Sinal \texttt{SIGPIPE}: encerra o processo. Se
 
 \begin{frame}[fragile]{Executando o exemplo}
 \begin{lstlisting}[style=terminal]
-$ make run-pipe-soma
-./build/pipe-soma
+$ gcc -Wall -Wextra examples/dia05/pipe_soma.c -o pipe-soma
+$ ./pipe-soma
 Resultado recebido: 30
 \end{lstlisting}
 
@@ -892,8 +897,8 @@ Uma ponta de escrita esquecida aberta impede o EOF: o calculador poderia esperar
 
 \begin{frame}[fragile]{Executando \texttt{pipe2.c}}
 \begin{lstlisting}[style=terminal]
-$ make run-pipe
-./build/pipe2
+$ gcc -Wall -Wextra pipe2.c -o pipe2 -lm
+$ ./pipe2
 >>> Digite tres numeros separados por espaco e tecle Enter: a b delta
 >>> Exemplo: 1 -3 1   (delta ja calculado; o programa nao pede c)
 a b delta: 1 -3 1
@@ -1058,13 +1063,27 @@ Threads \textbf{compartilham} memória. O problema muda: como controlar o acesso
 \end{columns}
 \end{frame}
 
-\begin{frame}[fragile]{Para estudar depois}
-\textbf{Rode os exemplos} (na raiz do repositório):
-\begin{lstlisting}[style=terminal]
-make run-fork-basico    make run-fork    make run-memoria
-make run-pipe-soma      make run-pipe    # digite 1 -3 1
+\begin{frame}[fragile]{Cola: compilar e executar os exemplos}
+\small Na raiz do repositório:
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+$ gcc -Wall -Wextra examples/dia05/fork_basico.c -o fork-basico && ./fork-basico
+$ gcc -Wall -Wextra fork2.c -o fork2 && ./fork2
+$ gcc -Wall -Wextra examples/dia05/memoria_independente.c -o memoria && ./memoria
+$ gcc -Wall -Wextra examples/dia05/pipe_soma.c -o pipe-soma && ./pipe-soma
+$ gcc -Wall -Wextra pipe2.c -o pipe2 -lm && ./pipe2              # digite 1 -3 1
+
+# pratica (avisos viram erros):
+$ gcc -std=c11 -Wall -Wextra -Wpedantic -Werror \
+      examples/dia05/pipe_soma_atividade.c -o pipe-soma-aluno && ./pipe-soma-aluno
 \end{lstlisting}
 
+\small \texttt{\&\&} só executa o programa se a compilação deu certo. Com o \texttt{make}: \texttt{make run-fork}, \texttt{make run-pipe}, \texttt{make run-pipe-soma}, \ldots
+\end{frame}
+
+\begin{frame}[fragile]{Para estudar depois}
+\textbf{Rode os exemplos}: os comandos estão no slide anterior.
+
+\vspace{0.5em}
 \textbf{Leia}
 \begin{itemize}
     \item A \textbf{apostila} da aula: os mesmos temas, explicados com mais calma, e exercícios com respostas.
