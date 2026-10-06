@@ -86,29 +86,25 @@
 \begin{frame}{Agenda}
 \begin{columns}[T]
 \column{0.5\textwidth}
-\textbf{Parte 1: teoria}
+\textbf{Parte 1: teoria} \hfill {\small 45 min}
 \begin{enumerate}
     \item De processos a threads
     \item Condição de corrida
     \item Região crítica e Peterson
     \item Semáforos
     \item Produtor-consumidor em C
-    \item Monitores em Java
+    \item Ver funcionando: simulação
+    \item Por que monitores?
 \end{enumerate}
 
 \column{0.5\textwidth}
-\textbf{Parte 2: demonstração visual}
-\begin{enumerate}
-    \setcounter{enumi}{6}
-    \item Simulação ``Produção de dinheiro''
-\end{enumerate}
-
-\vspace{0.6em}
-\textbf{Prática e fechamento}
+\textbf{Parte 2: prática} \hfill {\small 45 min}
 \begin{enumerate}
     \setcounter{enumi}{7}
-    \item Seis lacunas no produtor-consumidor
-    \item Bilhete de saída
+    \item Seis lacunas no produtor-consumidor (C)
+    \item Mailbox sem sincronização (Java, 3b)
+    \item Mailbox com monitor (Java, 3s)
+    \item Atividade final
 \end{enumerate}
 \end{columns}
 \end{frame}
@@ -124,8 +120,8 @@
     \item explicar por que \texttt{contador++} em duas threads perde incrementos;
     \item definir região crítica e exclusão mútua;
     \item dizer o que \texttt{mutex}, \texttt{empty} e \texttt{full} controlam, e por que a ordem importa;
-    \item explicar \texttt{synchronized}, \texttt{wait} e \texttt{notify}, e por que usar \texttt{while};
-    \item completar o produtor-consumidor com os semáforos certos.
+    \item completar o produtor-consumidor com os semáforos certos;
+    \item achar a condição de corrida na Mailbox 3b e explicar como \texttt{synchronized}, \texttt{wait} e \texttt{notify} a resolvem na 3s.
 \end{itemize}
 \end{frame}
 
@@ -449,6 +445,21 @@ início & 3 & 0 & 0 \\
 \uncover<8->{\small Repare: \texttt{empty + full = N} sempre que nenhuma operação está em andamento.}
 \end{frame}
 
+\begin{frame}{Sua vez: N = 5}
+\begin{center}
+{\large Buffer com \textbf{N = 5}: \texttt{empty} começa em 5 e \texttt{full} em 0.}
+
+\vspace{1em}
+{\large Depois de \textbf{dois itens produzidos} e \textbf{um consumido},\\[0.2em] quanto valem \texttt{empty} e \texttt{full}?}
+\end{center}
+
+\pause
+\vspace{1em}
+\begin{exampleblock}{Resposta}
+\texttt{empty = 4} e \texttt{full = 1}. De novo, \texttt{empty + full = N}.
+\end{exampleblock}
+\end{frame}
+
 % ============================================================
 \section{Produtor-consumidor em C}
 % ============================================================
@@ -544,7 +555,76 @@ Cada um espera algo que só o outro pode dar. O programa trava para sempre.
 \end{frame}
 
 % ============================================================
-\section{Monitores em Java}
+\section{Ver funcionando: simulação}
+% ============================================================
+
+\begin{frame}{Simulação ``Produção de dinheiro''}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Na tela} & \textbf{No \texttt{prod\_cons.c}} \\
+\midrule
+10 posições & \texttt{N} \\
+W: próxima escrita & \texttt{hi} \\
+R: próxima leitura & \texttt{lo} \\
+itens disponíveis & \texttt{full} \\
+vagas livres & \texttt{empty} \\
+``Aguardando\ldots'' & dormindo num semáforo \\
+\bottomrule
+\end{tabular}
+
+\column{0.48\textwidth}
+\small
+\begin{itemize}
+    \item \textbf{Banco}: o produtor (cria notas).
+    \item \textbf{Carro-forte}: o consumidor (retira notas).
+    \item Por baixo: threads e três semáforos, como no C.
+\end{itemize}
+
+\vspace{0.4em}
+\begin{exampleblock}{Só para ver}
+Cinco minutos para \textbf{enxergar} o que acabamos de estudar. Não há atividade sobre a simulação.
+\end{exampleblock}
+\end{columns}
+\end{frame}
+
+\begin{frame}{O que observar}
+\begin{columns}[T]
+\column{0.48\textwidth}
+\textbf{Produtor 10 · Consumidor 0,2}
+
+\vspace{0.4em}
+O buffer enche: \textbf{``Produtor: Aguardando vaga''}.
+
+\vspace{0.4em}
+\begin{alertblock}{No C}
+Dormindo em \texttt{sem\_wait(\&empty)}, com \texttt{empty = 0}, \textbf{sem} segurar o \texttt{mutex}.
+\end{alertblock}
+
+\column{0.48\textwidth}
+\pause
+\textbf{Produtor 0,2 · Consumidor 10}
+
+\vspace{0.4em}
+O buffer esvazia: \textbf{``Consumidor: Aguardando item''}.
+
+\vspace{0.4em}
+\begin{alertblock}{No C}
+Dormindo em \texttt{sem\_wait(\&full)}, com \texttt{full = 0}, até o próximo \texttt{sem\_post(\&full)}.
+\end{alertblock}
+\end{columns}
+
+\pause
+\vspace{0.8em}
+\begin{exampleblock}{Em uma frase}
+O \texttt{mutex} garante que ninguém atrapalha. \texttt{empty} e \texttt{full} garantem que ninguém trabalha sem ter o que precisa.
+\end{exampleblock}
+\end{frame}
+
+% ============================================================
+\section{Por que monitores?}
 % ============================================================
 
 \begin{frame}{Por que monitores?}
@@ -582,190 +662,15 @@ notifyAll() & Acorda \textbf{todas}; cada uma confere a sua condição. \\
 \small \texttt{Thread.sleep()} \textbf{não} solta a chave. Só \texttt{wait()} solta.
 \end{frame}
 
-\begin{frame}[fragile]{Mailbox 3b: sem sincronização}
-\begin{lstlisting}[style=java, basicstyle=\ttfamily\scriptsize\color{termfg}]
-public void storeMessage(String msg) {         // dois produtores chamam ao mesmo tempo
-    for (int i = 0; i < msg.length(); i++) {
-        message[i] = msg.charAt(i);            // escreve letra por letra no MESMO array
-        Thread.sleep((int) (MAXPROCESSTIME * Math.random()));
-    }
-    youHaveMail = true;
-}
-\end{lstlisting}
-
-\textbf{Saída real} (dois produtores: Dave diz ``Hello, world.'' e Bill diz ``Hot dog!''):
-\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
-My name is, Bill. I say, Hello, worl
-My name is, Bill. I say, Hot dog!    .
-My name is, Dave. I say, Het dog!
-\end{lstlisting}
-
-\small As letras dos dois produtores se misturam no mesmo array: é a condição de corrida, agora em Java.
-\end{frame}
-
-\begin{frame}[fragile]{Mailbox 3s: com monitor}
-\begin{lstlisting}[style=java, basicstyle=\ttfamily\scriptsize\color{termfg}]
-public synchronized void storeMessage(String msg) {   // precisa da chave do objeto
-    ... copia a mensagem letra por letra ...
-    youHaveMail = true;
-    notify();                                           // acorda o consumidor
-}
-
-public synchronized String retrieveMessage() {
-    while (youHaveMail == false)
-        wait();                                         // solta a chave e dorme
-    String msg = new String(message, 0, MAXMESSAGE);
-    youHaveMail = false;
-    return msg;
-}
-\end{lstlisting}
-
-\small Agora um produtor só começa a escrever quando o outro terminou: as mensagens saem \textbf{íntegras}. O consumidor dorme em vez de perguntar repetidamente.
-\end{frame}
-
-\begin{frame}{Por que \texttt{while} e não \texttt{if} antes de \texttt{wait()}?}
-\begin{itemize}
-    \item Quem acorda \textbf{não recebe a chave na hora}: precisa disputá-la de novo.
-    \item Enquanto isso, outra thread pode entrar e \textbf{mudar a condição} (por exemplo, pegar a mensagem antes).
-    \item O Java também permite \textbf{despertares espúrios}: acordar sem ninguém ter chamado \texttt{notify}.
-\end{itemize}
+\begin{frame}[standout]
+Parte 2: prática
 
 \vspace{0.6em}
-\begin{exampleblock}{Regra}
-Ao acordar, \textbf{confira de novo}. Com \texttt{while}, a thread só segue quando a condição for verdadeira de fato.
-\end{exampleblock}
-\end{frame}
-
-\begin{frame}[fragile]{O limite da mailbox 3s}
-\begin{alertblock}{Ela ainda pode perder mensagens}
-\texttt{storeMessage} não espera a caixa esvaziar. Se dois produtores escrevem antes de o consumidor ler, a primeira mensagem é \textbf{sobrescrita}. A 3s garante \textbf{integridade}, não \textbf{entrega}.
-\end{alertblock}
-
-\textbf{Como seria a versão completa} (uma posição, sem perda):
-\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
-guardar (synchronized):                retirar (synchronized):
-    enquanto cheia: wait()                 enquanto vazia: wait()
-    copia a mensagem                       copia a mensagem
-    cheia = verdadeiro                     cheia = falso
-    notifyAll()                            notifyAll()
-\end{lstlisting}
-
-\small É o produtor-consumidor com N = 1, escrito com monitor em vez de semáforos.
+{\normalsize Em duplas, no computador, com a folha de atividade}
 \end{frame}
 
 % ============================================================
-\section{Parte 2: demonstração visual}
-% ============================================================
-
-\begin{frame}{Simulação ``Produção de dinheiro''}
-\begin{columns}[T]
-\column{0.5\textwidth}
-\small
-\begin{tabular}{@{}ll@{}}
-\toprule
-\textbf{Na tela} & \textbf{No \texttt{prod\_cons.c}} \\
-\midrule
-10 posições & \texttt{N} \\
-W: próxima escrita & \texttt{hi} \\
-R: próxima leitura & \texttt{lo} \\
-itens disponíveis & \texttt{full} \\
-vagas livres & \texttt{empty} \\
-``Aguardando\ldots'' & dormindo num semáforo \\
-\bottomrule
-\end{tabular}
-
-\column{0.48\textwidth}
-\small
-\begin{itemize}
-    \item \textbf{Banco}: o produtor (cria notas).
-    \item \textbf{Carro-forte}: o consumidor (retira notas).
-    \item Velocidades de 0,2 a 10 itens/s.
-    \item \textbf{Iniciar}, \textbf{Pausar} e \textbf{Reiniciar}.
-\end{itemize}
-
-\vspace{0.4em}
-\begin{exampleblock}{Combinado}
-Antes de cada mudança, \textbf{faça a sua previsão}.
-\end{exampleblock}
-\end{columns}
-
-\vspace{0.4em}
-\small Tudo o que aparecer na tela tem um semáforo do C por trás.
-\end{frame}
-
-\begin{frame}{Experimento 1: ritmos iguais}
-\textbf{Produtor 2 itens/s · Consumidor 2 itens/s}
-
-\vspace{0.6em}
-\textbf{Previsão:} o buffer vai encher?
-
-\pause
-\vspace{0.4em}
-\begin{itemize}
-    \item Não: fica oscilando com poucas notas.
-    \item W e R andam quase juntos.
-    \item Ninguém espera muito: há quase sempre vaga e quase sempre item.
-\end{itemize}
-\end{frame}
-
-\begin{frame}{Experimento 2: produtor rápido}
-\textbf{Produtor 10 itens/s · Consumidor 0,2 itens/s}
-
-\vspace{0.6em}
-\textbf{Previsão:} o que acontece? Quem vai esperar?
-
-\pause
-\vspace{0.4em}
-\begin{itemize}
-    \item O buffer enche e aparece \textbf{``Produtor: Aguardando vaga: buffer cheio''}.
-\end{itemize}
-
-\pause
-\begin{alertblock}{No código C}
-O produtor está dormindo em \texttt{wait\_sem(\&empty)}, com \texttt{empty = 0}. Ele \textbf{não} segura o \texttt{mutex}: por isso o consumidor continua conseguindo retirar.
-\end{alertblock}
-\end{frame}
-
-\begin{frame}{Experimento 3: consumidor rápido}
-\textbf{Produtor 0,2 itens/s · Consumidor 10 itens/s}
-
-\vspace{0.6em}
-\textbf{Previsão:} e agora?
-
-\pause
-\vspace{0.4em}
-\begin{itemize}
-    \item O buffer esvazia e aparece \textbf{``Consumidor: Aguardando item: buffer vazio''}.
-\end{itemize}
-
-\pause
-\begin{alertblock}{No código C}
-O consumidor está dormindo em \texttt{wait\_sem(\&full)}, com \texttt{full = 0}. Cada nota nova faz \texttt{sem\_post(\&full)} e acorda o consumidor.
-\end{alertblock}
-\end{frame}
-
-\begin{frame}{Experimento 4: a volta do buffer e a pausa}
-\textbf{Produtor 3 · Consumidor 3, depois \textbf{Pausar}}
-
-\vspace{0.6em}
-\textbf{Previsão:} o que acontece com W depois da posição 9? E quanto dá itens + vagas?
-
-\pause
-\vspace{0.4em}
-\begin{itemize}
-    \item W volta para a posição 0: é o \texttt{hi = (hi + 1) \% N}.
-    \item Com a simulação pausada: \textbf{itens + vagas = 10}, sempre.
-    \item É o \texttt{empty + full = N} da simulação no quadro.
-\end{itemize}
-
-\pause
-\begin{exampleblock}{Para fechar a parte 2}
-O \texttt{mutex} garante que ninguém atrapalha. \texttt{empty} e \texttt{full} garantem que ninguém trabalha sem ter o que precisa.
-\end{exampleblock}
-\end{frame}
-
-% ============================================================
-\section{Prática}
+\section{Prática 1: seis lacunas em C}
 % ============================================================
 
 \begin{frame}[fragile]{Seis lacunas: \texttt{prod\_cons\_atividade.c}}
@@ -829,6 +734,155 @@ Trava sem terminar (\texttt{Ctrl + C}) & Alguém espera um semáforo que ningué
 \end{frame}
 
 % ============================================================
+\section{Prática 2: Mailbox sem sincronização}
+% ============================================================
+
+\begin{frame}[fragile]{Rodando a Mailbox 3b}
+\small Uma \texttt{Mailbox3b} compartilhada por \textbf{um consumidor} e \textbf{dois produtores}: Dave diz ``Hello, world.'' e Bill diz ``Hot dog!''.
+
+\textbf{Previsão:} as mensagens vão chegar certas?
+
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+$ javac -d build/java-3b Monitor-20261002T192224Z-1-001/Monitor/1/*.java
+$ timeout --foreground 5 java -cp build/java-3b ThreadSync3b | grep "My name"
+\end{lstlisting}
+
+\begin{itemize}\small
+    \item O programa nunca termina sozinho: o \texttt{timeout} encerra em 5 segundos.
+    \item Rode também \textbf{sem} o \texttt{| grep}: o que são as outras linhas?
+    \item Abra \texttt{Mailbox3b.java} e leia \texttt{storeMessage()}.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Mailbox 3b: o que aconteceu}
+\begin{lstlisting}[style=java, basicstyle=\ttfamily\scriptsize\color{termfg}]
+public void storeMessage(String msg) {         // dois produtores chamam ao mesmo tempo
+    for (int i = 0; i < msg.length(); i++) {
+        message[i] = msg.charAt(i);            // escreve letra por letra no MESMO array
+        Thread.sleep((int) (MAXPROCESSTIME * Math.random()));
+    }
+    youHaveMail = true;
+}
+\end{lstlisting}
+
+\textbf{Saída real:}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+My name is, Dave. I say, Helloog!
+My name is, Bill. I say, Hotlo, world.
+My name is, Dave. I say, Hot dog!
+\end{lstlisting}
+
+\small As letras dos dois produtores se misturam no mesmo array: é a condição de corrida, agora em Java.
+\end{frame}
+
+\begin{frame}{Prática 2: responda (questões 3 a 5)}
+\begin{enumerate}
+    \setcounter{enumi}{2}
+    \item Qual é o \textbf{recurso compartilhado} neste exemplo?
+    \item Onde está a \textbf{região crítica} no \texttt{Mailbox3b}?
+    \item Por que aumentar \texttt{MAXPROCESSTIME} tende a tornar o problema \textbf{mais visível}?
+\end{enumerate}
+
+\vspace{1em}
+\begin{exampleblock}{Se sobrar tempo}
+Mude \texttt{MAXPROCESSTIME} de 7 para 50 em \texttt{Mailbox3b.java}, compile e rode de novo. Compare.
+\end{exampleblock}
+\end{frame}
+
+% ============================================================
+\section{Prática 3: Mailbox com monitor}
+% ============================================================
+
+\begin{frame}[fragile]{Mailbox 3s: com monitor}
+\begin{lstlisting}[style=java, basicstyle=\ttfamily\scriptsize\color{termfg}]
+public synchronized void storeMessage(String msg) {   // precisa da chave do objeto
+    ... copia a mensagem letra por letra ...
+    youHaveMail = true;
+    notify();                                           // acorda o consumidor
+}
+
+public synchronized String retrieveMessage() {
+    while (youHaveMail == false)
+        wait();                                         // solta a chave e dorme
+    String msg = new String(message, 0, MAXMESSAGE);
+    youHaveMail = false;
+    return msg;
+}
+\end{lstlisting}
+
+\small Agora um produtor só começa a escrever quando o outro terminou: as mensagens saem \textbf{íntegras}. O consumidor dorme em vez de perguntar repetidamente.
+\end{frame}
+
+\begin{frame}[fragile]{Rodando a Mailbox 3s}
+\textbf{Previsão:} as mensagens ainda vão se misturar? E o ``How sad, no mail''?
+
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+$ javac -d build/java-3s Monitor-20261002T192224Z-1-001/Monitor/3/*.java
+$ timeout 5 java -cp build/java-3s ThreadSync3s
+Looking for my mail ..
+My name is, Dave. I say, Hello, world.
+Looking for my mail ..
+My name is, Bill. I say, Hot dog!
+\end{lstlisting}
+
+\begin{columns}[T]
+\column{0.48\textwidth}
+\small
+\textbf{Versão 3b}: acesso concorrente sem coordenação; o consumidor pergunta e volta de mãos vazias.
+\column{0.48\textwidth}
+\small
+\textbf{Versão 3s}: \texttt{synchronized} protege o estado; \texttt{wait()}/\texttt{notify()} fazem o consumidor dormir até ter mensagem.
+\end{columns}
+
+\vspace{0.6em}
+\small \textbf{Questão 6:} o que deixou de aparecer em relação à 3b? Qual parte do código causa cada mudança?
+\end{frame}
+
+\begin{frame}{Por que \texttt{while} e não \texttt{if} antes de \texttt{wait()}?}
+\begin{itemize}
+    \item Quem acorda \textbf{não recebe a chave na hora}: precisa disputá-la de novo.
+    \item Enquanto isso, outra thread pode entrar e \textbf{mudar a condição} (por exemplo, pegar a mensagem antes).
+    \item O Java também permite \textbf{despertares espúrios}: acordar sem ninguém ter chamado \texttt{notify}.
+\end{itemize}
+
+\vspace{0.6em}
+\begin{exampleblock}{Regra}
+Ao acordar, \textbf{confira de novo}. Com \texttt{while}, a thread só segue quando a condição for verdadeira de fato.
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{O limite da mailbox 3s}
+\begin{alertblock}{Ela ainda pode perder mensagens}
+\texttt{storeMessage} não espera a caixa esvaziar. Se dois produtores escrevem antes de o consumidor ler, a primeira mensagem é \textbf{sobrescrita}. A 3s garante \textbf{integridade}, não \textbf{entrega}.
+\end{alertblock}
+
+\textbf{Como seria a versão completa} (uma posição, sem perda):
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+guardar (synchronized):                retirar (synchronized):
+    enquanto cheia: wait()                 enquanto vazia: wait()
+    copia a mensagem                       copia a mensagem
+    cheia = verdadeiro                     cheia = falso
+    notifyAll()                            notifyAll()
+\end{lstlisting}
+
+\small É o produtor-consumidor com N = 1, escrito com monitor em vez de semáforos.
+\end{frame}
+
+% ============================================================
+\section{Atividade final}
+% ============================================================
+
+\begin{frame}{Atividade final (individual)}
+\begin{enumerate}
+    \setcounter{enumi}{6}
+    \item O que um monitor acrescenta em relação à ideia de apenas compartilhar um objeto?
+    \item Qual é o papel de \texttt{synchronized} no exemplo \texttt{Mailbox3s}?
+    \item Por que \texttt{retrieveMessage()} usa \texttt{while} antes de \texttt{wait()} em vez de simplesmente continuar?
+    \item Qual a diferença conceitual entre espera ocupada e \texttt{wait()}?
+\end{enumerate}
+\end{frame}
+
+% ============================================================
 \section{Fechamento}
 % ============================================================
 
@@ -872,15 +926,6 @@ Processos isolam a memória e precisam de pipe para conversar. Threads compartil
 \end{exampleblock}
 \end{frame}
 
-\begin{frame}{Bilhete de saída}
-\begin{center}
-{\large \textbf{Individual, em duas ou três frases:}}
-
-\vspace{1em}
-{\Large Qual problema o \texttt{mutex} resolve\\[0.2em] e qual problema \texttt{empty} e \texttt{full} resolvem?}
-\end{center}
-\end{frame}
-
 \begin{frame}{Glossário}
 \footnotesize
 \begin{columns}[T]
@@ -910,6 +955,7 @@ $ gcc -Wall -Wextra peterson-code.c -o peterson -pthread && ./peterson
 $ gcc -Wall -Wextra prod_cons.c -o prod_cons -pthread && ./prod_cons
 $ make java && timeout 5 java -cp build/java-3b ThreadSync3b     # mailbox 3b
 $ make java && timeout 5 java -cp build/java-3s ThreadSync3s     # mailbox 3s
+$ make run-caixa                                                 # caixa sem perdas
 $ make run-simulation                                            # Producao de dinheiro
 
 # pratica (avisos viram erros):

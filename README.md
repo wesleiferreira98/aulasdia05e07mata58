@@ -68,7 +68,7 @@ make test-simulation
 make run-simulation
 ```
 
-A janela requer JDK 25+ e Maven; o teste do modelo não precisa de JavaFX. Use a simulação no encontro de 7/10 antes de ler o protocolo de semáforos em C.
+A janela requer JDK 25+ e Maven; o teste do modelo não precisa de JavaFX. No encontro de 7/10, a simulação é uma demonstração de 5 minutos, logo depois do produtor-consumidor em C.
 
 ## Aula de 5/10 pronta para aplicação
 
@@ -80,10 +80,12 @@ make run-pipe-soma
 
 ## Aula de 7/10 pronta para aplicação
 
-Duas partes: teoria nos slides (corrida, região crítica, Peterson, semáforos, produtor-consumidor, monitores) e demonstração visual com a simulação, seguidas de prática com seis lacunas no produtor-consumidor. [Roteiro](docs/aulas/dia07/ROTEIRO.md), [atividade](docs/aulas/dia07/ATIVIDADE.md), [gabarito](docs/aulas/dia07/GABARITO.md), [cola de demonstração](docs/aulas/dia07/COLA_DEMONSTRACAO.md), [slides](docs/aulas/dia07/slides/aula07_concorrencia.pdf) e [apostila](docs/aulas/dia07/apostila/apostila07_concorrencia.pdf).
+Duas partes de 45 minutos, seguindo a Aula 2 do guia do professor. **Teoria:** corrida, região crítica, Peterson, semáforos, produtor-consumidor, 5 minutos de simulação só para visualizar e monitores. **Prática:** seis lacunas no produtor-consumidor em C, Mailbox 3b e 3s ao vivo e as questões finais do guia. [Roteiro](docs/aulas/dia07/ROTEIRO.md), [atividade](docs/aulas/dia07/ATIVIDADE.md), [gabarito](docs/aulas/dia07/GABARITO.md), [cola de demonstração](docs/aulas/dia07/COLA_DEMONSTRACAO.md), [slides](docs/aulas/dia07/slides/aula07_concorrencia.pdf) e [apostila](docs/aulas/dia07/apostila/apostila07_concorrencia.pdf).
 
 ```bash
 make run-corrida          # condição de corrida: contador sai menor que o esperado
-make run-simulation       # parte 2: Produção de dinheiro
+make run-simulation       # teoria: 5 min de Produção de dinheiro
+make run-java-3b          # prática 2: mailbox sem sincronização (Ctrl+C para sair)
+make run-java-3s          # prática 3: mailbox com monitor (Ctrl+C para sair)
 make run-resposta-dia07   # resposta comentada da prática
 ```

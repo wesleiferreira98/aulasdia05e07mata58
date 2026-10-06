@@ -196,7 +196,7 @@ Se a demonstração original de pipe2 falhar, mantenha a análise do fluxo e use
 
 ## 4. Aula de 7/10: concorrência e sincronização
 
-Material pronto para aplicação: [roteiro](../docs/aulas/dia07/ROTEIRO.md) (teoria, simulação e prática), [atividade](../docs/aulas/dia07/ATIVIDADE.md), [gabarito](../docs/aulas/dia07/GABARITO.md) e [cola de demonstração](../docs/aulas/dia07/COLA_DEMONSTRACAO.md). A seção abaixo continua valendo como referência conceitual.
+Material pronto para aplicação: [roteiro](../docs/aulas/dia07/ROTEIRO.md) (teoria em 45 min, com 5 min de simulação; prática em 45 min, com lacunas em C e mailboxes Java), [atividade](../docs/aulas/dia07/ATIVIDADE.md), [gabarito](../docs/aulas/dia07/GABARITO.md) e [cola de demonstração](../docs/aulas/dia07/COLA_DEMONSTRACAO.md). A seção abaixo continua valendo como referência conceitual.
 
 Objetivos observáveis: construir uma intercalação problemática, justificar a ordem dos semáforos e explicar a diferença entre lock e espera por condição.
 
