@@ -68,7 +68,7 @@ make test-simulation
 make run-simulation
 ```
 
-A janela requer JDK 21+ e Maven; o teste do modelo não precisa de JavaFX. Use a simulação no encontro de 7/10 antes de ler o protocolo de semáforos em C.
+A janela requer JDK 25+ e Maven; o teste do modelo não precisa de JavaFX. Use a simulação no encontro de 7/10 antes de ler o protocolo de semáforos em C.
 
 ## Aula de 5/10 pronta para aplicação
 

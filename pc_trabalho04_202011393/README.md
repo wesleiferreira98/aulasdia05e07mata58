@@ -4,7 +4,7 @@ Refatoração do trabalho de **Weslei Ferreira Santos**, de abril de 2022, para 
 
 ## Executar
 
-Requisitos: **JDK 21 ou superior**, Maven e ambiente gráfico. JavaFX é resolvido pelo Maven, sem caminhos absolutos de bibliotecas.
+Requisitos: **JDK 25 ou superior**, Maven e ambiente gráfico. JavaFX é resolvido pelo Maven, sem caminhos absolutos de bibliotecas.
 
 ```bash
 cd pc_trabalho04_202011393
@@ -35,16 +35,8 @@ A simulação coordena seu ciclo de vida com um monitor adicional. Para exibir u
 
 A interface foi reconstruída com componentes nativos JavaFX; os recursos gráficos do trabalho antigo permanecem no original. Não inclui áudio nem seleção de múltiplos consumidores: a demonstração tem um produtor e um consumidor.
 
-Referências: [JavaFX com Maven](https://openjfx.io/openjfx-docs/) e [Semaphore](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Semaphore.html).
+Referências: [JavaFX com Maven](https://openjfx.io/openjfx-docs/) e [Semaphore](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/concurrent/Semaphore.html).
 
-## Verificação realizada
+## Compatibilidade
 
-O modelo passou pelo teste independente e por `mvn test`. A interface compilou com `-Xlint:all -Werror` e abriu durante um teste de inicialização de oito segundos no ambiente gráfico. Não foi feita inspeção visual por captura nem validação manual de todos os controles.
-
-Neste computador, o compilador embutido está disponível, mas faltam os arquivos usados por `--release`. Para essa instalação específica, o teste Maven foi executado com:
-
-```bash
-mvn -Dmaven.compiler.release= -Dmaven.compiler.source=21 -Dmaven.compiler.target=21 test
-```
-
-Os mesmos parâmetros podem preceder `javafx:run`. Com JDK 21 completo, mantenha os comandos normais. O teste do modelo também funciona pelo alvo `make test-simulation` sem esse ajuste. Maven e bibliotecas usadas na validação foram baixados em /tmp, sem instalação permanente no sistema.
+Use JDK 25 ou superior para executar `mvn test` e `mvn javafx:run`. O projeto é compilado com APIs e bytecode Java 25.
