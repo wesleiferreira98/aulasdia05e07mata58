@@ -1,0 +1,949 @@
+\documentclass[aspectratio=169]{beamer}
+
+\usetheme{metropolis}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{listings}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{booktabs}
+\newcolumntype{R}[1]{>{\raggedright\arraybackslash}p{#1}}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, fit, backgrounds}
+
+\setbeamertemplate{frame numbering}[fraction]
+\metroset{block=fill}
+
+\definecolor{termbg}{RGB}{40,44,52}
+\definecolor{termfg}{RGB}{220,220,220}
+\definecolor{codekw}{RGB}{235,129,27}
+\definecolor{codecom}{RGB}{140,150,160}
+\definecolor{codestr}{RGB}{152,195,121}
+
+\lstdefinestyle{terminal}{
+    backgroundcolor=\color{termbg},
+    basicstyle=\ttfamily\footnotesize\color{termfg},
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{termbg},
+    framerule=2pt,
+    xleftmargin=4pt,
+    xrightmargin=4pt,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    literate={á}{{\'a}}1 {à}{{\`a}}1 {â}{{\^a}}1 {ã}{{\~a}}1 {é}{{\'e}}1 {ê}{{\^e}}1
+             {í}{{\'i}}1 {ó}{{\'o}}1 {ô}{{\^o}}1 {õ}{{\~o}}1 {ú}{{\'u}}1 {ç}{{\c c}}1
+}
+
+\lstdefinestyle{codigo}{
+    style=terminal,
+    language=C,
+    keywordstyle=\color{codekw}\bfseries,
+    commentstyle=\color{codecom}\itshape,
+    stringstyle=\color{codestr},
+    morekeywords={pthread_t, sem_t, size_t},
+    moredelim=[is][\color{codekw}\bfseries]{@}{@}
+}
+
+\lstdefinestyle{java}{
+    style=codigo,
+    language=Java,
+    morekeywords={synchronized}
+}
+
+% Elementos visuais das figuras
+\tikzset{
+    proc/.style={draw=mDarkTeal, fill=mDarkTeal!8, rounded corners=3pt, thick,
+        minimum width=2.1cm, minimum height=0.8cm, align=center, font=\small},
+    procf/.style={proc, draw=mDarkTeal!70, fill=white, minimum width=1.3cm, font=\footnotesize},
+    destaque/.style={proc, draw=mLightBrown, fill=mLightBrown!12},
+    seta/.style={-{Stealth[length=2.2mm]}, thick, draw=mDarkTeal},
+    setad/.style={-{Stealth[length=2.2mm]}, very thick, draw=mLightBrown},
+    rotulo/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
+    celula/.style={draw=mDarkTeal, minimum width=1.05cm, minimum height=0.8cm, font=\ttfamily\small, fill=white},
+    cheia/.style={celula, fill=mLightBrown!25}
+}
+
+% Revelar partes de uma figura TikZ aos poucos (overlays do beamer).
+\tikzset{
+    invisivel/.style={opacity=0, text opacity=0},
+    visible on/.style={alt={#1{}{invisivel}}},
+    alt/.code args={<#1>#2#3}{\alt<#1>{\pgfkeysalso{#2}}{\pgfkeysalso{#3}}}
+}
+
+\title{Concorrência e sincronização}
+\subtitle{Condição de corrida, semáforos, produtor-consumidor e monitores}
+\author{Weslei Ferreira Santos}
+\institute{MATA58 · Sistemas Operacionais\\Instituto de Computação / UFBA}
+\date{7 de outubro de 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{Agenda}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Parte 1: teoria}
+\begin{enumerate}
+    \item De processos a threads
+    \item Condição de corrida
+    \item Região crítica e Peterson
+    \item Semáforos
+    \item Produtor-consumidor em C
+    \item Monitores em Java
+\end{enumerate}
+
+\column{0.5\textwidth}
+\textbf{Parte 2: demonstração visual}
+\begin{enumerate}
+    \setcounter{enumi}{6}
+    \item Simulação ``Produção de dinheiro''
+\end{enumerate}
+
+\vspace{0.6em}
+\textbf{Prática e fechamento}
+\begin{enumerate}
+    \setcounter{enumi}{7}
+    \item Seis lacunas no produtor-consumidor
+    \item Bilhete de saída
+\end{enumerate}
+\end{columns}
+\end{frame}
+
+\begin{frame}{A pergunta desta aula}
+\begin{center}
+{\Large \textbf{Se as threads compartilham a memória,\\[0.2em] como impedir que uma atrapalhe a outra?}}
+\end{center}
+
+\vspace{1em}
+\textbf{Ao final, você deve conseguir:}
+\begin{itemize}
+    \item explicar por que \texttt{contador++} em duas threads perde incrementos;
+    \item definir região crítica e exclusão mútua;
+    \item dizer o que \texttt{mutex}, \texttt{empty} e \texttt{full} controlam, e por que a ordem importa;
+    \item explicar \texttt{synchronized}, \texttt{wait} e \texttt{notify}, e por que usar \texttt{while};
+    \item completar o produtor-consumidor com os semáforos certos.
+\end{itemize}
+\end{frame}
+
+% ============================================================
+\section{De processos a threads}
+% ============================================================
+
+\begin{frame}{Lembrando a aula passada}
+\begin{columns}[c]
+\column{0.5\textwidth}
+\begin{itemize}
+    \item No \texttt{fork2.c}, o pai somou \textbf{0}.
+    \item Cada processo tem a \textbf{sua} memória: o que um escreve, o outro não vê.
+    \item Para conversar, foi preciso um canal do SO: o \textbf{pipe}.
+\end{itemize}
+
+\column{0.48\textwidth}
+\begin{alertblock}{Hoje o problema se inverte}
+As \textbf{threads} de um processo \textbf{dividem} a memória. Comunicar ficou fácil. O difícil agora é \textbf{não se atrapalhar}.
+\end{alertblock}
+\end{columns}
+\end{frame}
+
+\begin{frame}{O que as threads compartilham}
+\begin{columns}[c]
+\column{0.5\textwidth}
+\begin{center}
+\begin{tikzpicture}[node distance=0pt,
+    reg/.style={draw=mDarkTeal, fill=mDarkTeal!8, minimum width=4.6cm, minimum height=0.55cm, font=\small},
+    pil/.style={draw=mLightBrown, fill=mLightBrown!15, minimum width=2.2cm, minimum height=0.9cm, font=\small, align=center}]
+    \node[reg] (cod) {código};
+    \node[reg, below=of cod] (glo) {variáveis globais};
+    \node[reg, below=of glo] (heap) {heap (\texttt{malloc})};
+    \node[reg, below=of heap] (arq) {arquivos abertos};
+    \node[pil, below=0.25cm of arq.south west, anchor=north west] (p1) {pilha\\thread 1};
+    \node[pil, below=0.25cm of arq.south east, anchor=north east] (p2) {pilha\\thread 2};
+    \node[draw=black!40, dashed, rounded corners, fit=(cod)(p1)(p2), inner sep=0.2cm,
+          label={[font=\scriptsize, text=black!60]above:um processo}] {};
+\end{tikzpicture}
+\end{center}
+
+\column{0.48\textwidth}
+\small
+\textbf{Compartilhado} (azul): código, globais, heap, arquivos.\\[0.5em]
+\textbf{De cada thread} (laranja): pilha (variáveis locais) e registradores.
+
+\vspace{0.6em}
+\begin{exampleblock}{Consequência}
+Uma variável global escrita por uma thread é vista pela outra na hora, sem pipe.
+\end{exampleblock}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Criando threads em C}
+\begin{lstlisting}[style=codigo]
+void *somar(void *arg) { ... return NULL; }   /* o que a thread executa */
+
+pthread_t t1, t2;
+pthread_create(&t1, NULL, somar, NULL);        /* cria e ja comeca a rodar */
+pthread_create(&t2, NULL, somar, NULL);
+pthread_join(t1, NULL);                        /* espera a thread terminar */
+pthread_join(t2, NULL);
+\end{lstlisting}
+
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}lll@{}}
+\toprule
+& \textbf{Processos (aula passada)} & \textbf{Threads (hoje)} \\
+\midrule
+Criar & \texttt{fork()} & \texttt{pthread\_create()} \\
+Esperar terminar & \texttt{waitpid()} & \texttt{pthread\_join()} \\
+Memória & cópia separada & \textbf{a mesma} \\
+Compilar & normal & com \texttt{-pthread} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{frame}
+
+% ============================================================
+\section{Condição de corrida}
+% ============================================================
+
+\begin{frame}{\texttt{contador++} não é uma operação só}
+\begin{center}
+{\large Para o processador, \texttt{contador++} são \textbf{três passos}:}
+
+\vspace{0.8em}
+\begin{tikzpicture}[node distance=1.2cm]
+    \node[proc] (l) {1. \textbf{ler}\\\scriptsize valor da memória};
+    \node[proc, right=of l] (s) {2. \textbf{somar 1}\\\scriptsize no registrador};
+    \node[proc, right=of s] (e) {3. \textbf{escrever}\\\scriptsize de volta na memória};
+    \draw[seta] (l) -- (s);
+    \draw[seta] (s) -- (e);
+\end{tikzpicture}
+\end{center}
+
+\vspace{0.6em}
+\begin{alertblock}{O perigo}
+Entre um passo e outro, o escalonador pode trocar de thread. A outra thread pode ler o valor \textbf{antigo} antes da primeira escrever o novo.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Uma intercalação que perde um incremento}
+\small Contador começa em 0. Cada thread quer somar 1. Esperado: \textbf{2}.
+
+\begin{center}
+\begin{tabular}{@{}clll@{}}
+\toprule
+\textbf{Passo} & \textbf{Thread A} & \textbf{Thread B} & \textbf{contador} \\
+\midrule
+\uncover<2->{1} & \uncover<2->{lê 0} & & \uncover<2->{0} \\
+\uncover<3->{2} & & \uncover<3->{lê 0} & \uncover<3->{0} \\
+\uncover<4->{3} & \uncover<4->{calcula 1} & & \uncover<4->{0} \\
+\uncover<5->{4} & & \uncover<5->{calcula 1} & \uncover<5->{0} \\
+\uncover<6->{5} & \uncover<6->{escreve 1} & & \uncover<6->{1} \\
+\uncover<7->{6} & & \uncover<7->{escreve 1} & \uncover<7->{\textbf{1}} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\uncover<8->{
+\begin{alertblock}{Condição de corrida}
+O resultado depende da \textbf{ordem} em que as threads foram intercaladas. Aqui, a escrita de A foi apagada pela de B.
+\end{alertblock}}
+\end{frame}
+
+\begin{frame}[fragile]{Na prática: \texttt{corrida.c}}
+\begin{lstlisting}[style=codigo, basicstyle=\ttfamily\scriptsize\color{termfg}]
+static volatile int contador = 0;           /* global: as duas threads veem a mesma */
+
+static void *somar(void *arg) {
+    for (int i = 0; i < 1000000; ++i)
+        contador = contador + 1;            /* regiao critica SEM protecao */
+    return NULL;
+}
+\end{lstlisting}
+
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+$ gcc -Wall -Wextra examples/dia07/corrida.c -o corrida -pthread
+$ ./corrida
+Contador: 1006933 (esperado: 2000000)
+$ ./corrida
+Contador: 1349235 (esperado: 2000000)
+\end{lstlisting}
+
+\small Quase metade dos incrementos se perde, e o resultado \textbf{muda a cada execução}.
+\end{frame}
+
+\begin{frame}{Dois avisos sobre \texttt{corrida.c}}
+\begin{itemize}
+    \item Em C, duas threads acessando a mesma variável sem sincronização é uma \textbf{data race}: comportamento \textbf{indefinido}. O resultado não está garantido nem a ser ``1 ou 2''.
+    \item \texttt{volatile} \textbf{não conserta}: ele só impede o compilador de juntar as somas. Está ali para a corrida aparecer.
+    \item Pôr um \texttt{sleep} também não conserta: só muda a probabilidade.
+\end{itemize}
+
+\vspace{0.6em}
+\begin{exampleblock}{O que conserta}
+Garantir que só uma thread por vez execute o trecho que mexe no contador. Isso tem nome: \textbf{exclusão mútua}.
+\end{exampleblock}
+\end{frame}
+
+% ============================================================
+\section{Região crítica e exclusão mútua}
+% ============================================================
+
+\begin{frame}{Região crítica e exclusão mútua}
+\begin{alertblock}{Definições}
+\textbf{Região crítica}: trecho do código que acessa um recurso compartilhado.\\[0.3em]
+\textbf{Exclusão mútua}: no máximo \textbf{uma} thread por vez dentro da região crítica.
+\end{alertblock}
+
+\textbf{Uma boa solução precisa garantir} (Tanenbaum):
+\begin{enumerate}
+    \item Duas threads nunca estão ao mesmo tempo na região crítica.
+    \item Não depende da velocidade nem do número de CPUs.
+    \item Quem está fora da região crítica não bloqueia ninguém.
+    \item Ninguém espera para sempre para entrar.
+\end{enumerate}
+\end{frame}
+
+\begin{frame}[fragile]{Algoritmo de Peterson (duas threads)}
+\begin{columns}[T]
+\column{0.55\textwidth}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+/* entrada */
+interessado[eu] = verdadeiro
+vez = outro
+enquanto interessado[outro] e vez == outro:
+    esperar
+
+/* região crítica */
+
+/* saída */
+interessado[eu] = falso
+\end{lstlisting}
+
+\column{0.43\textwidth}
+\small
+\begin{itemize}
+    \item \texttt{interessado[i]}: a thread \texttt{i} quer entrar.
+    \item \texttt{vez}: quem cede em caso de empate.
+\end{itemize}
+
+\vspace{0.3em}
+\begin{tabular}{@{}R{2.4cm}R{3.2cm}@{}}
+\toprule
+\textbf{Situação} & \textbf{O que acontece} \\
+\midrule
+O outro não quer entrar & Entro direto \\
+Os dois querem & Quem escreveu \texttt{vez} por \textbf{último} espera \\
+\bottomrule
+\end{tabular}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Peterson em C: \texttt{peterson-code.c}}
+\begin{lstlisting}[style=codigo]
+static void enter_region(int eu) {
+    int outro = 1 - eu;
+    atomic_store(&interested[eu], 1);       /* quero entrar */
+    atomic_store(&turn, outro);             /* cedo a vez em caso de empate */
+    while (atomic_load(&interested[outro]) && atomic_load(&turn) == outro)
+        ;                                   /* espera ocupada */
+}
+static void leave_region(int eu) { atomic_store(&interested[eu], 0); }
+\end{lstlisting}
+
+\begin{lstlisting}[style=terminal]
+$ gcc -Wall -Wextra peterson-code.c -o peterson -pthread && ./peterson
+Contador: 20000 (esperado: 20000)
+\end{lstlisting}
+
+\small \textbf{Por que atomics?} Com variáveis comuns, compilador e processador podem reordenar leituras e escritas, e Peterson deixa de funcionar.
+\end{frame}
+
+\begin{frame}{Espera ocupada}
+\textbf{O que a thread faz enquanto está presa no \texttt{while}?}
+
+\pause
+\begin{itemize}
+    \item Fica \textbf{girando}: testa, testa, testa de novo.
+    \item Continua \textbf{gastando CPU} sem fazer trabalho útil.
+    \item Com uma CPU só, pode até atrasar a thread que precisa sair da região crítica.
+\end{itemize}
+
+\vspace{0.6em}
+\begin{alertblock}{Queremos melhor}
+Em vez de girar, a thread deveria \textbf{dormir} e ser \textbf{acordada} quando puder seguir. É isso que o semáforo faz.
+\end{alertblock}
+\end{frame}
+
+% ============================================================
+\section{Semáforos}
+% ============================================================
+
+\begin{frame}{Semáforo: um contador que nunca fica negativo}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{\texttt{sem\_wait(\&s)}} (também: \emph{down}, P)
+\begin{itemize}
+    \item Se \texttt{s > 0}: diminui 1 e segue.
+    \item Se \texttt{s == 0}: a thread \textbf{dorme}.
+\end{itemize}
+
+\column{0.5\textwidth}
+\textbf{\texttt{sem\_post(\&s)}} (também: \emph{up}, V)
+\begin{itemize}
+    \item Soma 1.
+    \item Se alguém dorme em \texttt{s}, \textbf{acorda} um.
+\end{itemize}
+\end{columns}
+
+\vspace{0.8em}
+\begin{exampleblock}{Analogia: estacionamento com placa de vagas}
+O valor do semáforo é o número de vagas na placa. Quem chega e vê 0 \textbf{espera parado}, sem rodar em volta do quarteirão. Quem sai, soma uma vaga e libera o próximo.
+\end{exampleblock}
+
+\small A espera e o despertar são feitos pelo SO de forma \textbf{atômica}: não há corrida no próprio contador.
+\end{frame}
+
+\begin{frame}{Os três semáforos do produtor-consumidor}
+\begin{center}
+\begin{tabular}{@{}llR{7.4cm}@{}}
+\toprule
+\textbf{Semáforo} & \textbf{Começa em} & \textbf{O que controla} \\
+\midrule
+\texttt{mutex} & 1 & \textbf{Exclusão mútua}: só uma thread mexe no buffer por vez. É a ``chave''. \\
+\texttt{empty} & N & \textbf{Disponibilidade}: quantas \textbf{vagas} livres existem. \\
+\texttt{full} & 0 & \textbf{Disponibilidade}: quantos \textbf{itens} prontos existem. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.6em}
+\begin{alertblock}{Dois problemas diferentes}
+\texttt{mutex} responde ``\textbf{posso mexer agora?}''.\\
+\texttt{empty} e \texttt{full} respondem ``\textbf{tem o que eu preciso?}''.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Simulando no quadro com N = 3}
+\begin{center}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Evento} & \textbf{empty} & \textbf{full} & \textbf{count} \\
+\midrule
+início & 3 & 0 & 0 \\
+\uncover<2->{produz A} & \uncover<2->{2} & \uncover<2->{1} & \uncover<2->{1} \\
+\uncover<3->{produz B} & \uncover<3->{1} & \uncover<3->{2} & \uncover<3->{2} \\
+\uncover<4->{consome A} & \uncover<4->{2} & \uncover<4->{1} & \uncover<4->{1} \\
+\uncover<5->{produz C} & \uncover<5->{1} & \uncover<5->{2} & \uncover<5->{2} \\
+\uncover<6->{produz D} & \uncover<6->{0} & \uncover<6->{3} & \uncover<6->{3} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\uncover<7->{
+\textbf{E se o produtor quiser o quinto item?} Ele dorme em \texttt{sem\_wait(\&empty)}, sem segurar o \texttt{mutex}, até o consumidor liberar uma vaga.}
+
+\uncover<8->{\small Repare: \texttt{empty + full = N} sempre que nenhuma operação está em andamento.}
+\end{frame}
+
+% ============================================================
+\section{Produtor-consumidor em C}
+% ============================================================
+
+\begin{frame}{O problema: um buffer, dois ritmos}
+\begin{center}
+\begin{tikzpicture}
+    \node[proc] (prod) at (-1.2,0) {Produtor};
+    \foreach \i/\v in {0/7, 1/42, 2/13, 3/{}, 4/{}} {
+        \ifx\v\empty \node[celula] (c\i) at (2.0+\i*1.05,0) {}; \else \node[cheia] (c\i) at (2.0+\i*1.05,0) {\v}; \fi
+        \node[font=\tiny, below=1pt of c\i] {\i};
+    }
+    \node[proc] (cons) at (9.9,0) {Consumidor};
+    \draw[setad] (prod) -- (c0.west);
+    \draw[setad] (c4.east) -- (cons);
+    \node[font=\scriptsize\bfseries, text=mLightBrown, above=0.15cm of c3] {W (\texttt{hi})};
+    \node[font=\scriptsize\bfseries, text=mDarkTeal, above=0.15cm of c0] {R (\texttt{lo})};
+\end{tikzpicture}
+\end{center}
+
+\begin{itemize}
+    \item O produtor escreve na posição \texttt{hi}; o consumidor lê da posição \texttt{lo}.
+    \item Os índices andam com \texttt{(i + 1) \% N}: depois da última posição, voltam para a 0 (\textbf{buffer circular}).
+    \item Buffer \textbf{cheio}: o produtor precisa esperar. Buffer \textbf{vazio}: o consumidor precisa esperar.
+    \item Ninguém pode mexer no buffer enquanto o outro mexe.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Produtor e consumidor: \texttt{prod\_cons.c}}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\begin{lstlisting}[style=codigo, basicstyle=\ttfamily\scriptsize\color{termfg}]
+/* PRODUTOR */
+wait_sem(&empty);   /* 1. reserva VAGA  */
+wait_sem(&mutex);   /* 2. pega a chave  */
+insert_item(item);  /* 3. mexe no buffer */
+sem_post(&mutex);   /* 4. devolve chave */
+sem_post(&full);    /* 5. avisa: ITEM   */
+\end{lstlisting}
+
+\column{0.5\textwidth}
+\begin{lstlisting}[style=codigo, basicstyle=\ttfamily\scriptsize\color{termfg}]
+/* CONSUMIDOR */
+wait_sem(&full);    /* 1. reserva ITEM  */
+wait_sem(&mutex);   /* 2. pega a chave  */
+item = remove_item(); /* 3. mexe       */
+sem_post(&mutex);   /* 4. devolve chave */
+sem_post(&empty);   /* 5. avisa: VAGA   */
+\end{lstlisting}
+\end{columns}
+
+\vspace{0.4em}
+\begin{exampleblock}{Regra para lembrar}
+Cada thread \textbf{espera o que consome} e \textbf{avisa o que cria}. O produtor consome vagas e cria itens; o consumidor, o contrário.
+\end{exampleblock}
+
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+$ gcc -Wall -Wextra prod_cons.c -o prod_cons -pthread && ./prod_cons
+Produzido: 29 | ocupacao: 1/20   ...   Fim: 40 itens produzidos e consumidos; buffer vazio.
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{E se a ordem for invertida?}
+\begin{columns}[c]
+\column{0.45\textwidth}
+\begin{lstlisting}[style=codigo, basicstyle=\ttfamily\scriptsize\color{termfg}]
+/* CONSUMIDOR ERRADO */
+wait_sem(&mutex);   /* pega a chave...    */
+wait_sem(&full);    /* ...e dorme com ela */
+\end{lstlisting}
+
+\small Com o buffer \textbf{vazio}:
+\begin{enumerate}
+    \item O consumidor pega o \texttt{mutex}.
+    \item Dorme em \texttt{full}, \textbf{segurando a chave}.
+    \item O produtor dorme em \texttt{mutex}.
+\end{enumerate}
+
+\column{0.53\textwidth}
+\begin{center}
+\begin{tikzpicture}[node distance=2.2cm]
+    \node[proc] (c) {Consumidor\\\scriptsize tem \texttt{mutex}};
+    \node[proc, right=of c] (p) {Produtor\\\scriptsize quer \texttt{mutex}};
+    \draw[setad, bend left=25] (c) to node[rotulo, above] {espera um item} (p);
+    \draw[setad, bend left=25] (p) to node[rotulo, below] {espera a chave} (c);
+\end{tikzpicture}
+\end{center}
+
+\begin{alertblock}{Deadlock}
+Cada um espera algo que só o outro pode dar. O programa trava para sempre.
+\end{alertblock}
+\end{columns}
+\end{frame}
+
+% ============================================================
+\section{Monitores em Java}
+% ============================================================
+
+\begin{frame}{Por que monitores?}
+Semáforos funcionam, mas deixam tudo nas mãos do programador:
+
+\begin{itemize}
+    \item É fácil \textbf{esquecer} um \texttt{sem\_post}: alguém dorme para sempre.
+    \item É fácil \textbf{trocar a ordem}: deadlock, como acabamos de ver.
+    \item É fácil \textbf{proteger a coisa errada}: a corrida continua.
+\end{itemize}
+
+\vspace{0.6em}
+\begin{alertblock}{Monitor}
+Um objeto que junta os \textbf{dados compartilhados}, as \textbf{operações} sobre eles e a \textbf{exclusão mútua}. Quem usa o objeto não precisa lembrar de pegar e devolver a chave.
+\end{alertblock}
+
+\small Analogia: um banheiro com uma \textbf{chave única}. Quem tem a chave entra; os outros esperam na porta.
+\end{frame}
+
+\begin{frame}{As três ferramentas de um monitor Java}
+\begin{center}
+\begin{tabular}{@{}>{\ttfamily}lR{9.6cm}@{}}
+\toprule
+\textrm{\textbf{Recurso}} & \textbf{O que faz} \\
+\midrule
+synchronized & Para executar o método, a thread precisa da \textbf{chave} (lock) do objeto. Só uma thread por vez dentro dos métodos \texttt{synchronized} do mesmo objeto. \\
+wait() & \textbf{Solta a chave} e dorme até ser avisada. Só pode ser chamado com a chave na mão. \\
+notify() & Acorda \textbf{uma} thread que esperava nesse objeto. Ela ainda precisa \textbf{pegar a chave de novo} para continuar. \\
+notifyAll() & Acorda \textbf{todas}; cada uma confere a sua condição. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.4em}
+\small \texttt{Thread.sleep()} \textbf{não} solta a chave. Só \texttt{wait()} solta.
+\end{frame}
+
+\begin{frame}[fragile]{Mailbox 3b: sem sincronização}
+\begin{lstlisting}[style=java, basicstyle=\ttfamily\scriptsize\color{termfg}]
+public void storeMessage(String msg) {         // dois produtores chamam ao mesmo tempo
+    for (int i = 0; i < msg.length(); i++) {
+        message[i] = msg.charAt(i);            // escreve letra por letra no MESMO array
+        Thread.sleep((int) (MAXPROCESSTIME * Math.random()));
+    }
+    youHaveMail = true;
+}
+\end{lstlisting}
+
+\textbf{Saída real} (dois produtores: Dave diz ``Hello, world.'' e Bill diz ``Hot dog!''):
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+My name is, Bill. I say, Hello, worl
+My name is, Bill. I say, Hot dog!    .
+My name is, Dave. I say, Het dog!
+\end{lstlisting}
+
+\small As letras dos dois produtores se misturam no mesmo array: é a condição de corrida, agora em Java.
+\end{frame}
+
+\begin{frame}[fragile]{Mailbox 3s: com monitor}
+\begin{lstlisting}[style=java, basicstyle=\ttfamily\scriptsize\color{termfg}]
+public synchronized void storeMessage(String msg) {   // precisa da chave do objeto
+    ... copia a mensagem letra por letra ...
+    youHaveMail = true;
+    notify();                                           // acorda o consumidor
+}
+
+public synchronized String retrieveMessage() {
+    while (youHaveMail == false)
+        wait();                                         // solta a chave e dorme
+    String msg = new String(message, 0, MAXMESSAGE);
+    youHaveMail = false;
+    return msg;
+}
+\end{lstlisting}
+
+\small Agora um produtor só começa a escrever quando o outro terminou: as mensagens saem \textbf{íntegras}. O consumidor dorme em vez de perguntar repetidamente.
+\end{frame}
+
+\begin{frame}{Por que \texttt{while} e não \texttt{if} antes de \texttt{wait()}?}
+\begin{itemize}
+    \item Quem acorda \textbf{não recebe a chave na hora}: precisa disputá-la de novo.
+    \item Enquanto isso, outra thread pode entrar e \textbf{mudar a condição} (por exemplo, pegar a mensagem antes).
+    \item O Java também permite \textbf{despertares espúrios}: acordar sem ninguém ter chamado \texttt{notify}.
+\end{itemize}
+
+\vspace{0.6em}
+\begin{exampleblock}{Regra}
+Ao acordar, \textbf{confira de novo}. Com \texttt{while}, a thread só segue quando a condição for verdadeira de fato.
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{O limite da mailbox 3s}
+\begin{alertblock}{Ela ainda pode perder mensagens}
+\texttt{storeMessage} não espera a caixa esvaziar. Se dois produtores escrevem antes de o consumidor ler, a primeira mensagem é \textbf{sobrescrita}. A 3s garante \textbf{integridade}, não \textbf{entrega}.
+\end{alertblock}
+
+\textbf{Como seria a versão completa} (uma posição, sem perda):
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+guardar (synchronized):                retirar (synchronized):
+    enquanto cheia: wait()                 enquanto vazia: wait()
+    copia a mensagem                       copia a mensagem
+    cheia = verdadeiro                     cheia = falso
+    notifyAll()                            notifyAll()
+\end{lstlisting}
+
+\small É o produtor-consumidor com N = 1, escrito com monitor em vez de semáforos.
+\end{frame}
+
+% ============================================================
+\section{Parte 2: demonstração visual}
+% ============================================================
+
+\begin{frame}{Simulação ``Produção de dinheiro''}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Na tela} & \textbf{No \texttt{prod\_cons.c}} \\
+\midrule
+10 posições & \texttt{N} \\
+W: próxima escrita & \texttt{hi} \\
+R: próxima leitura & \texttt{lo} \\
+itens disponíveis & \texttt{full} \\
+vagas livres & \texttt{empty} \\
+``Aguardando\ldots'' & dormindo num semáforo \\
+\bottomrule
+\end{tabular}
+
+\column{0.48\textwidth}
+\small
+\begin{itemize}
+    \item \textbf{Banco}: o produtor (cria notas).
+    \item \textbf{Carro-forte}: o consumidor (retira notas).
+    \item Velocidades de 0,2 a 10 itens/s.
+    \item \textbf{Iniciar}, \textbf{Pausar} e \textbf{Reiniciar}.
+\end{itemize}
+
+\vspace{0.4em}
+\begin{exampleblock}{Combinado}
+Antes de cada mudança, \textbf{faça a sua previsão}.
+\end{exampleblock}
+\end{columns}
+
+\vspace{0.4em}
+\small Tudo o que aparecer na tela tem um semáforo do C por trás.
+\end{frame}
+
+\begin{frame}{Experimento 1: ritmos iguais}
+\textbf{Produtor 2 itens/s · Consumidor 2 itens/s}
+
+\vspace{0.6em}
+\textbf{Previsão:} o buffer vai encher?
+
+\pause
+\vspace{0.4em}
+\begin{itemize}
+    \item Não: fica oscilando com poucas notas.
+    \item W e R andam quase juntos.
+    \item Ninguém espera muito: há quase sempre vaga e quase sempre item.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Experimento 2: produtor rápido}
+\textbf{Produtor 10 itens/s · Consumidor 0,2 itens/s}
+
+\vspace{0.6em}
+\textbf{Previsão:} o que acontece? Quem vai esperar?
+
+\pause
+\vspace{0.4em}
+\begin{itemize}
+    \item O buffer enche e aparece \textbf{``Produtor: Aguardando vaga: buffer cheio''}.
+\end{itemize}
+
+\pause
+\begin{alertblock}{No código C}
+O produtor está dormindo em \texttt{wait\_sem(\&empty)}, com \texttt{empty = 0}. Ele \textbf{não} segura o \texttt{mutex}: por isso o consumidor continua conseguindo retirar.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Experimento 3: consumidor rápido}
+\textbf{Produtor 0,2 itens/s · Consumidor 10 itens/s}
+
+\vspace{0.6em}
+\textbf{Previsão:} e agora?
+
+\pause
+\vspace{0.4em}
+\begin{itemize}
+    \item O buffer esvazia e aparece \textbf{``Consumidor: Aguardando item: buffer vazio''}.
+\end{itemize}
+
+\pause
+\begin{alertblock}{No código C}
+O consumidor está dormindo em \texttt{wait\_sem(\&full)}, com \texttt{full = 0}. Cada nota nova faz \texttt{sem\_post(\&full)} e acorda o consumidor.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Experimento 4: a volta do buffer e a pausa}
+\textbf{Produtor 3 · Consumidor 3, depois \textbf{Pausar}}
+
+\vspace{0.6em}
+\textbf{Previsão:} o que acontece com W depois da posição 9? E quanto dá itens + vagas?
+
+\pause
+\vspace{0.4em}
+\begin{itemize}
+    \item W volta para a posição 0: é o \texttt{hi = (hi + 1) \% N}.
+    \item Com a simulação pausada: \textbf{itens + vagas = 10}, sempre.
+    \item É o \texttt{empty + full = N} da simulação no quadro.
+\end{itemize}
+
+\pause
+\begin{exampleblock}{Para fechar a parte 2}
+O \texttt{mutex} garante que ninguém atrapalha. \texttt{empty} e \texttt{full} garantem que ninguém trabalha sem ter o que precisa.
+\end{exampleblock}
+\end{frame}
+
+% ============================================================
+\section{Prática}
+% ============================================================
+
+\begin{frame}[fragile]{Seis lacunas: \texttt{prod\_cons\_atividade.c}}
+\begin{lstlisting}[style=codigo, basicstyle=\ttfamily\scriptsize\color{termfg}]
+sem_init(&mutex, 0, 1);
+sem_init(&empty, 0, @/* 1: vagas no inicio */@);
+sem_init(&full,  0, @/* 2: itens no inicio */@);
+\end{lstlisting}
+
+\begin{columns}[T]
+\column{0.48\textwidth}
+\begin{lstlisting}[style=codigo, basicstyle=\ttfamily\scriptsize\color{termfg}]
+/* produtor */
+wait_sem(@/* 3 */@);
+wait_sem(&mutex);
+insert_item(item);
+sem_post(&mutex);
+sem_post(@/* 4 */@);
+\end{lstlisting}
+\column{0.48\textwidth}
+\begin{lstlisting}[style=codigo, basicstyle=\ttfamily\scriptsize\color{termfg}]
+/* consumidor */
+wait_sem(@/* 5 */@);
+wait_sem(&mutex);
+item = remove_item();
+sem_post(&mutex);
+sem_post(@/* 6 */@);
+\end{lstlisting}
+\end{columns}
+
+\footnotesize
+\textbf{1 e 2:} quantas vagas e quantos itens no início?\\
+\textbf{3 e 5:} o que cada um precisa antes de mexer?\\
+\textbf{4 e 6:} o que cada um avisa depois?\\
+O \texttt{mutex} já está pronto. Não mude a ordem das linhas.
+\end{frame}
+
+\begin{frame}[fragile]{Compilar, testar e diagnosticar}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+$ gcc -std=c11 -Wall -Wextra -Wpedantic -Werror \
+      examples/dia07/prod_cons_atividade.c -o prod-cons-aluno -pthread
+$ ./prod-cons-aluno
+...
+Fim: 40 itens produzidos e consumidos; buffer vazio.
+\end{lstlisting}
+
+\begin{center}
+\small
+\begin{tabular}{@{}R{5.6cm}R{7cm}@{}}
+\toprule
+\textbf{Sintoma} & \textbf{O que significa} \\
+\midrule
+Trava sem terminar (\texttt{Ctrl + C}) & Alguém espera um semáforo que ninguém libera \\
+\texttt{Assertion `count < N' failed} & O produtor inseriu sem haver vaga \\
+\texttt{Assertion `count > 0' failed} & O consumidor retirou sem haver item \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\small Antes de preencher, o esqueleto \textbf{não compila}. É proposital.
+\end{frame}
+
+% ============================================================
+\section{Fechamento}
+% ============================================================
+
+\begin{frame}{Erros comuns}
+\begin{center}
+\small
+\begin{tabular}{@{}R{4.6cm}R{8.4cm}@{}}
+\toprule
+\textbf{Se você pensou\ldots} & \textbf{Reveja\ldots} \\
+\midrule
+``\texttt{contador++} é uma operação só.'' & São três passos: ler, somar, escrever. \\
+``\texttt{volatile} resolve a corrida.'' & Não: é preciso exclusão mútua. \\
+``O \texttt{mutex} conta as vagas.'' & O \texttt{mutex} é a chave; quem conta é \texttt{empty} e \texttt{full}. \\
+``Tanto faz a ordem dos \texttt{sem\_wait}.'' & Dormir segurando a chave causa deadlock. \\
+``Semáforo é igual a Peterson.'' & No semáforo quem espera dorme; em Peterson, gira. \\
+``\texttt{notify} entrega a chave na hora.'' & Quem acorda disputa a chave e confere de novo. \\
+``\texttt{sleep} libera o monitor.'' & Só \texttt{wait} libera. \\
+``A mailbox 3s entrega tudo.'' & Ela pode sobrescrever mensagem não lida. \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{frame}
+
+\begin{frame}{Síntese}
+\begin{center}
+\begin{tabular}{@{}lR{9.6cm}@{}}
+\toprule
+\textbf{Condição de corrida} & Resultado depende da ordem de intercalação das threads. \\
+\textbf{Região crítica} & Trecho que acessa o recurso compartilhado. \\
+\textbf{Peterson} & Exclusão mútua para duas threads, com espera ocupada. \\
+\textbf{Semáforo} & Contador com \texttt{wait}/\texttt{post}; quem espera dorme. \\
+\textbf{Produtor-consumidor} & \texttt{mutex} para exclusão; \texttt{empty} e \texttt{full} para disponibilidade. \\
+\textbf{Monitor} & Dados, operações e exclusão mútua juntos; \texttt{wait}/\texttt{notify} para condições. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.6em}
+\begin{exampleblock}{As duas aulas em uma frase}
+Processos isolam a memória e precisam de pipe para conversar. Threads compartilham e precisam de sincronização para não se atrapalhar.
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}{Bilhete de saída}
+\begin{center}
+{\large \textbf{Individual, em duas ou três frases:}}
+
+\vspace{1em}
+{\Large Qual problema o \texttt{mutex} resolve\\[0.2em] e qual problema \texttt{empty} e \texttt{full} resolvem?}
+\end{center}
+\end{frame}
+
+\begin{frame}{Glossário}
+\footnotesize
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Thread}: fluxo de execução dentro de um processo; divide a memória com as outras.\\[0.35em]
+\textbf{Condição de corrida}: resultado depende da ordem das threads.\\[0.35em]
+\textbf{Data race}: acesso concorrente sem sincronização; em C, comportamento indefinido.\\[0.35em]
+\textbf{Região crítica}: trecho que mexe no recurso compartilhado.\\[0.35em]
+\textbf{Exclusão mútua}: uma thread por vez na região crítica.\\[0.35em]
+\textbf{Espera ocupada}: esperar girando e gastando CPU.
+
+\column{0.5\textwidth}
+\textbf{Semáforo}: contador não negativo com \texttt{wait} e \texttt{post}.\\[0.35em]
+\textbf{Mutex}: semáforo (ou lock) que vale 0 ou 1; a ``chave''.\\[0.35em]
+\textbf{Deadlock}: cada um espera algo que só o outro pode dar.\\[0.35em]
+\textbf{Monitor}: objeto com dados, operações e exclusão mútua juntos.\\[0.35em]
+\textbf{\texttt{wait} / \texttt{notify}}: dormir soltando a chave / acordar quem dorme.\\[0.35em]
+\textbf{Buffer circular}: índices voltam a 0 com \texttt{\% N}.
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Cola: compilar e executar os exemplos}
+\small Na raiz do repositório:
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+$ gcc -Wall -Wextra examples/dia07/corrida.c -o corrida -pthread && ./corrida
+$ gcc -Wall -Wextra peterson-code.c -o peterson -pthread && ./peterson
+$ gcc -Wall -Wextra prod_cons.c -o prod_cons -pthread && ./prod_cons
+$ make java && timeout 5 java -cp build/java-3b ThreadSync3b     # mailbox 3b
+$ make java && timeout 5 java -cp build/java-3s ThreadSync3s     # mailbox 3s
+$ make run-simulation                                            # Producao de dinheiro
+
+# pratica (avisos viram erros):
+$ gcc -std=c11 -Wall -Wextra -Wpedantic -Werror \
+      examples/dia07/prod_cons_atividade.c -o prod-cons-aluno -pthread && ./prod-cons-aluno
+\end{lstlisting}
+
+\small As mailboxes Java nunca terminam sozinhas: o \texttt{timeout 5} encerra depois de 5 segundos (ou use \texttt{Ctrl + C}).
+\end{frame}
+
+\begin{frame}{Para estudar depois}
+\textbf{Rode os exemplos}: os comandos estão no slide anterior.
+
+\vspace{0.5em}
+\textbf{Leia}
+\begin{itemize}
+    \item A \textbf{apostila} da aula: os mesmos temas, com mais calma, e exercícios com respostas.
+    \item \texttt{man 3 sem\_wait}, \texttt{man 3 pthread\_create}, \texttt{man 7 pthreads}.
+    \item Tanenbaum e Bos, \emph{Sistemas Operacionais Modernos}, 4. ed., seção 2.3 (comunicação entre processos).
+    \item Silberschatz, Galvin e Gagne, \emph{Fundamentos de Sistemas Operacionais}, 9. ed., cap. 5 (sincronização de processos).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Obrigado!}
+\centering
+{\Large Dúvidas?}
+\vspace{2em}
+
+Weslei Ferreira Santos\\
+MATA58 · Sistemas Operacionais\\
+Instituto de Computação / UFBA
+
+\vspace{1.5em}
+{\scriptsize Material-base: Prof. Maycon Leone M. Peixoto}
+\end{frame}
+
+\end{document}

@@ -26,7 +26,7 @@ Os programas C terminam sozinhos. Saídas e explicações: [guia dos exemplos](d
 | Encontro | Tema | Exemplos |
 |---|---|---|
 | 5/10 | Processos, memória e IPC | `fork2.c`, `pipe2.c` |
-| 7/10 | Threads, região crítica e sincronização | `peterson-code.c`, `prod_cons.c`, mailboxes Java |
+| 7/10 | Threads, região crítica e sincronização | `corrida.c`, `peterson-code.c`, `prod_cons.c`, mailboxes Java, simulação |
 
 [Guia completo do professor](preparacao/GUIA_DO_PROFESSOR.md): roteiro com tempos, explicações, perguntas e gabaritos. [Preparação do laboratório](docs/LABORATORIO.md): requisitos e comandos Java.
 
@@ -76,4 +76,14 @@ A janela requer JDK 21+ e Maven; o teste do modelo não precisa de JavaFX. Use a
 
 ```bash
 make run-pipe-soma
+```
+
+## Aula de 7/10 pronta para aplicação
+
+Duas partes: teoria nos slides (corrida, região crítica, Peterson, semáforos, produtor-consumidor, monitores) e demonstração visual com a simulação, seguidas de prática com seis lacunas no produtor-consumidor. [Roteiro](docs/aulas/dia07/ROTEIRO.md), [atividade](docs/aulas/dia07/ATIVIDADE.md), [gabarito](docs/aulas/dia07/GABARITO.md), [cola de demonstração](docs/aulas/dia07/COLA_DEMONSTRACAO.md), [slides](docs/aulas/dia07/slides/aula07_concorrencia.pdf) e [apostila](docs/aulas/dia07/apostila/apostila07_concorrencia.pdf).
+
+```bash
+make run-corrida          # condição de corrida: contador sai menor que o esperado
+make run-simulation       # parte 2: Produção de dinheiro
+make run-resposta-dia07   # resposta comentada da prática
 ```

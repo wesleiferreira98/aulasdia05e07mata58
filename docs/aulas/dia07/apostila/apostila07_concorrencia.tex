@@ -1,0 +1,1321 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{microtype}
+\usepackage{needspace}
+\usepackage{etoolbox}
+\usepackage[a4paper, margin=2.4cm, headheight=14pt]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{amsmath, amssymb}
+\usepackage[explicit]{titlesec}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage[most]{tcolorbox}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, fit, backgrounds}
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+
+% ------------------------------------------------------------
+% Cores do tema metropolis, as mesmas dos slides
+% ------------------------------------------------------------
+\definecolor{mDarkTeal}{HTML}{23373B}
+\definecolor{mLightBrown}{HTML}{EB811B}
+\definecolor{mLightGreen}{HTML}{14B03D}
+\definecolor{mBackground}{HTML}{FAFAFA}
+\definecolor{termbg}{RGB}{40,44,52}
+\definecolor{termfg}{RGB}{220,220,220}
+\definecolor{codekw}{RGB}{235,129,27}
+\definecolor{codecom}{RGB}{140,150,160}
+\definecolor{codestr}{RGB}{152,195,121}
+
+\hypersetup{pdftitle={Concorrência e sincronização}, pdfauthor={Weslei Ferreira Santos}}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\setlist{itemsep=0.2em, topsep=0.3em}
+\setlist[itemize]{label=\textcolor{mDarkTeal}{\small$\blacktriangleright$}}
+
+% ------------------------------------------------------------
+% Títulos no estilo dos slides
+% ------------------------------------------------------------
+\newcommand{\barradesecao}[1]{%
+  \begin{tcolorbox}[colback=mDarkTeal, colframe=mDarkTeal, sharp corners, boxrule=0pt,
+      left=10pt, right=10pt, top=7pt, bottom=7pt, coltext=white, fontupper=\Large\bfseries]
+  \thesection\quad #1
+  \end{tcolorbox}}
+\titleformat{\section}[block]{}{}{0pt}{\barradesecao{#1}}
+\titleformat{name=\section, numberless}[block]{}{}{0pt}{%
+  \begin{tcolorbox}[colback=mDarkTeal, colframe=mDarkTeal, sharp corners, boxrule=0pt,
+      left=10pt, right=10pt, top=7pt, bottom=7pt, coltext=white, fontupper=\Large\bfseries]
+  #1
+  \end{tcolorbox}}
+\titlespacing*{\section}{0pt}{1.2em}{0.6em}
+
+\titleformat{\subsection}[block]{\large\bfseries\color{mDarkTeal}}{}{0pt}%
+  {\thesubsection\quad #1}[\vspace{-\parskip}\vspace{3pt}{\color{mLightBrown}\rule{3.2cm}{1.4pt}}]
+\titleformat{name=\subsection, numberless}[block]{\large\bfseries\color{mDarkTeal}}{}{0pt}%
+  {#1}[\vspace{-\parskip}\vspace{3pt}{\color{mLightBrown}\rule{3.2cm}{1.4pt}}]
+\titlespacing*{\subsection}{0pt}{1.1em}{0.4em}
+\pretocmd{\subsection}{\needspace{6\baselineskip}}{}{\PackageWarning{apostila}{pretocmd falhou}}
+\pretocmd{\section}{\needspace{16\baselineskip}}{}{\PackageWarning{apostila}{pretocmd falhou}}
+
+\titleformat{\subsubsection}[runin]{\bfseries\color{mDarkTeal}}{}{0pt}{#1.}
+\titlespacing*{\subsubsection}{0pt}{0.8em}{0.6em}
+
+% ------------------------------------------------------------
+% Cabeçalho e rodapé
+% ------------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{mDarkTeal} MATA58 · Sistemas Operacionais}
+\fancyhead[R]{\small\color{mDarkTeal} Concorrência e sincronização}
+\fancyfoot[R]{\small\color{mDarkTeal}\thepage/\pageref{LastPage}}
+\renewcommand{\headrule}{\color{mLightBrown}\hrule height 0.8pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% ------------------------------------------------------------
+% Blocos no estilo "block=fill" do metropolis
+% ------------------------------------------------------------
+\tcbset{
+  bloco/.style={enhanced, breakable, sharp corners, boxrule=0pt, frame hidden,
+    colback=black!4, colbacktitle=black!11, fonttitle=\bfseries,
+    left=8pt, right=8pt, top=5pt, bottom=6pt, toptitle=3pt, bottomtitle=3pt,
+    before skip=0.9em, after skip=0.9em}
+}
+\newtcolorbox{definicao}[1][Definição]{bloco, coltitle=mDarkTeal, title={#1}}
+\newtcolorbox{alerta}[1][Atenção]{bloco, coltitle=mLightBrown, title={#1}}
+\newtcolorbox{exemplo}[1][Exemplo]{bloco, coltitle=mLightGreen!80!black, title={#1}}
+\newtcolorbox{pergunta}[1][Pare e pense]{bloco, colback=mLightBrown!7, colbacktitle=mLightBrown!20,
+  coltitle=mLightBrown!70!black, title={#1}}
+
+% ------------------------------------------------------------
+% Código e terminal, iguais aos slides
+% ------------------------------------------------------------
+\lstdefinestyle{terminal}{
+    backgroundcolor=\color{termbg},
+    basicstyle=\ttfamily\small\color{termfg},
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{termbg},
+    framerule=3pt,
+    xleftmargin=4pt,
+    xrightmargin=4pt,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    tabsize=4,
+    literate={á}{{\'a}}1 {à}{{\`a}}1 {â}{{\^a}}1 {ã}{{\~a}}1 {é}{{\'e}}1 {ê}{{\^e}}1
+             {í}{{\'i}}1 {ó}{{\'o}}1 {ô}{{\^o}}1 {õ}{{\~o}}1 {ú}{{\'u}}1 {ç}{{\c c}}1,
+    aboveskip=0.8em,
+    belowskip=0.8em
+}
+\lstdefinestyle{codigo}{
+    style=terminal,
+    language=C,
+    basicstyle=\ttfamily\footnotesize\color{termfg},
+    keywordstyle=\color{codekw}\bfseries,
+    commentstyle=\color{codecom}\itshape,
+    stringstyle=\color{codestr},
+    morekeywords={pthread_t, sem_t, size_t, atomic_int, atomic_bool},
+    moredelim=[is][\color{codekw}\bfseries]{@}{@}
+}
+\lstdefinestyle{arquivo}{
+    style=codigo,
+    numbers=left,
+    numberstyle=\tiny\color{codecom},
+    numbersep=8pt,
+    xleftmargin=22pt,
+    framexleftmargin=18pt
+}
+
+% ------------------------------------------------------------
+% Figuras
+% ------------------------------------------------------------
+\tikzset{
+    proc/.style={draw=mDarkTeal, fill=mDarkTeal!8, rounded corners=3pt, thick,
+        minimum width=2.1cm, minimum height=0.8cm, align=center, font=\small},
+    procf/.style={proc, draw=mDarkTeal!70, fill=white, minimum width=1.2cm, font=\footnotesize},
+    destaque/.style={proc, draw=mLightBrown, fill=mLightBrown!12},
+    arquivo/.style={draw=black!50, fill=black!5, thick, minimum width=2.2cm,
+        minimum height=1.1cm, align=center, font=\small},
+    seta/.style={-{Stealth[length=2.2mm]}, thick, draw=mDarkTeal},
+    setad/.style={-{Stealth[length=2.2mm]}, very thick, draw=mLightBrown},
+    rotulo/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
+    celula/.style={draw=mDarkTeal, minimum size=0.7cm, font=\ttfamily\small, fill=white},
+    regiao/.style={draw=mDarkTeal, fill=mDarkTeal!6, minimum width=3.6cm, minimum height=0.75cm,
+        font=\small, align=center}
+}
+
+\lstdefinestyle{java}{style=codigo, language=Java, morekeywords={synchronized}}
+\lstdefinestyle{arquivojava}{style=arquivo, language=Java, morekeywords={synchronized}}
+\newcolumntype{R}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\newcommand{\raiz}{../../../..}
+\newcommand{\cmd}[1]{\texttt{#1}}
+
+\begin{document}
+
+% ============================================================
+% Capa
+% ============================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\vspace*{5cm}
+{\color{mDarkTeal}\fontsize{28}{34}\selectfont\bfseries Concorrência\\[0.2em] e sincronização\par}
+\vspace{0.8em}
+{\Large\color{mDarkTeal!80} Condição de corrida, semáforos, produtor-consumidor e monitores\par}
+\vspace{1em}
+{\color{mLightBrown}\rule{\linewidth}{1.2pt}}
+\vspace{1em}
+
+{\large Apostila da aula de 7 de outubro de 2026\par}
+\vspace{3em}
+{\large Weslei Ferreira Santos\par}
+\vspace{0.6em}
+MATA58 · Sistemas Operacionais\\
+Instituto de Computação / UFBA
+
+\vfill
+{\small\color{black!60} Material-base: Prof. Maycon Leone M. Peixoto. Os programas citados estão no repositório da disciplina e podem ser compilados com \cmd{gcc} ou \cmd{make}.\par}
+\end{titlepage}
+
+\tableofcontents
+\clearpage
+
+% ============================================================
+\section{Antes de começar}
+% ============================================================
+
+Na aula de 5/10 vimos que cada processo tem a sua própria memória: o pai somou 0 porque as escritas dos filhos ficaram nas cópias deles, e para levar um resultado de um processo a outro foi preciso um pipe. Nesta aula o problema se inverte. As \textbf{threads} de um mesmo processo dividem a memória. Comunicar fica fácil; o difícil passa a ser impedir que uma thread atrapalhe a outra.
+
+\begin{center}
+{\large\bfseries\color{mDarkTeal} Se as threads compartilham a memória, como impedir que uma atrapalhe a outra?}
+\end{center}
+
+O caminho da aula é este: primeiro vemos o problema acontecer (a \textbf{condição de corrida}); depois damos nome ao trecho perigoso (\textbf{região crítica}) e estudamos três ferramentas para protegê-lo: o algoritmo de \textbf{Peterson}, os \textbf{semáforos} e os \textbf{monitores}. No meio, o problema clássico do \textbf{produtor-consumidor} mostra para que serve cada ferramenta, e uma simulação visual deixa tudo isso visível.
+
+\subsection{O que você deve conseguir ao final}
+
+\begin{itemize}
+    \item Explicar por que \cmd{contador++} em duas threads perde incrementos.
+    \item Definir região crítica e exclusão mútua.
+    \item Explicar Peterson e o que é espera ocupada.
+    \item Dizer o que \cmd{mutex}, \cmd{empty} e \cmd{full} controlam no produtor-consumidor e por que a ordem dos \cmd{sem\_wait} importa.
+    \item Explicar \cmd{synchronized}, \cmd{wait} e \cmd{notify} em Java, e por que se usa \cmd{while} antes de \cmd{wait}.
+    \item Completar o produtor-consumidor com os semáforos certos.
+\end{itemize}
+
+\subsection{Como usar os exemplos}
+
+Na raiz do repositório:
+
+\begin{lstlisting}[style=terminal]
+$ gcc -Wall -Wextra examples/dia07/corrida.c -o corrida -pthread && ./corrida
+$ gcc -Wall -Wextra examples/dia07/corrida_atomic.c -o corrida-atomic -pthread && ./corrida-atomic
+$ gcc -Wall -Wextra examples/dia07/corrida_mutex.c -o corrida-mutex -pthread && ./corrida-mutex
+$ gcc -Wall -Wextra peterson-code.c -o peterson -pthread && ./peterson
+$ gcc -Wall -Wextra prod_cons.c -o prod_cons -pthread && ./prod_cons
+$ make java && timeout 5 java -cp build/java-3b ThreadSync3b
+$ make java && timeout 5 java -cp build/java-3s ThreadSync3s
+$ make run-caixa               # caixa de correio correta em Java
+$ make run-simulation          # janela da simulacao Producao de dinheiro
+\end{lstlisting}
+
+A opção \cmd{-pthread} prepara a compilação para usar threads. No Linux atual o programa costuma compilar mesmo sem ela, mas em sistemas mais antigos aparece \cmd{undefined reference to pthread\_create}; use sempre. As mailboxes Java rodam para sempre: \cmd{timeout 5} as encerra depois de 5 segundos (ou use \cmd{Ctrl + C}).
+
+% ============================================================
+\section{De processos a threads}
+% ============================================================
+
+\subsection{O que é uma thread}
+
+\begin{definicao}
+Uma \textbf{thread} é um fluxo de execução dentro de um processo. Um processo pode ter várias threads; todas executam o mesmo programa e enxergam a mesma memória, mas cada uma tem o seu próprio ponto de execução, os seus registradores e a sua pilha.
+\end{definicao}
+
+\begin{center}
+\begin{tikzpicture}[node distance=0pt,
+    reg/.style={draw=mDarkTeal, fill=mDarkTeal!8, minimum width=5.4cm, minimum height=0.6cm, font=\small},
+    pil/.style={draw=mLightBrown, fill=mLightBrown!15, minimum width=2.6cm, minimum height=0.9cm, font=\small, align=center}]
+    \node[reg] (cod) {código};
+    \node[reg, below=of cod] (glo) {variáveis globais};
+    \node[reg, below=of glo] (heap) {heap (\texttt{malloc})};
+    \node[reg, below=of heap] (arq) {arquivos abertos};
+    \node[pil, below=0.25cm of arq.south west, anchor=north west] (p1) {pilha\\thread 1};
+    \node[pil, below=0.25cm of arq.south east, anchor=north east] (p2) {pilha\\thread 2};
+    \node[draw=black!40, dashed, rounded corners, fit=(cod)(p1)(p2), inner sep=0.2cm,
+          label={[font=\scriptsize, text=black!60]above:um processo}] {};
+    \node[right=0.6cm of glo, font=\footnotesize, align=left] {\textbf{compartilhado}\\por todas as threads};
+    \node[right=0.6cm of p2, font=\footnotesize, align=left] {\textbf{de cada thread}};
+\end{tikzpicture}
+\end{center}
+
+\begin{center}
+\begin{tabular}{@{}R{0.45\linewidth}R{0.45\linewidth}@{}}
+\toprule
+\textbf{Compartilhado pelas threads} & \textbf{Próprio de cada thread} \\
+\midrule
+Código do programa & Pilha (variáveis locais, chamadas de função) \\
+Variáveis globais e \cmd{static} & Registradores e contador de programa \\
+Heap (o que foi alocado com \cmd{malloc}) & Estado (executando, pronta, bloqueada) \\
+Arquivos e pipes abertos & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Criando threads em C}
+
+Com a biblioteca POSIX threads (\cmd{pthread}):
+
+\begin{lstlisting}[style=codigo]
+#include <pthread.h>
+
+void *somar(void *arg) { ...; return NULL; }   /* o que a thread executa */
+
+pthread_t t1, t2;
+pthread_create(&t1, NULL, somar, NULL);        /* cria; a thread ja comeca a rodar */
+pthread_create(&t2, NULL, somar, NULL);
+pthread_join(t1, NULL);                        /* espera t1 terminar */
+pthread_join(t2, NULL);
+\end{lstlisting}
+
+\begin{itemize}
+    \item \cmd{pthread\_create} recebe o endereço onde guardar o identificador, atributos (\cmd{NULL} = padrão), a função que a thread vai executar e um argumento para ela.
+    \item \cmd{pthread\_join} faz quem chamou esperar a thread terminar. É o equivalente do \cmd{waitpid} para threads.
+    \item Ao contrário das funções que vimos na aula passada, as funções \cmd{pthread\_*} não devolvem \cmd{-1}: devolvem \cmd{0} em sucesso ou o \textbf{código do erro}.
+\end{itemize}
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+& \textbf{Processos (5/10)} & \textbf{Threads (7/10)} \\
+\midrule
+Criar & \cmd{fork()} & \cmd{pthread\_create()} \\
+Esperar terminar & \cmd{waitpid()} & \cmd{pthread\_join()} \\
+Memória & cópia separada & \textbf{a mesma} \\
+Comunicar & pipe & variável compartilhada \\
+Risco principal & dados não chegam & dados se \textbf{atropelam} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Concorrência e paralelismo}
+
+Duas palavras que costumam ser confundidas:
+
+\begin{definicao}
+\textbf{Concorrência}: várias tarefas estão em andamento no mesmo período de tempo, e a execução delas se \textbf{intercala}. Basta uma CPU: o sistema alterna entre elas tão rápido que parecem simultâneas.
+
+\textbf{Paralelismo}: várias tarefas executam \textbf{literalmente ao mesmo tempo}, em núcleos diferentes.
+\end{definicao}
+
+Todo programa paralelo é concorrente, mas não o contrário. Os problemas desta aula aparecem nos dois casos: numa CPU única, a troca de thread pode acontecer no meio de uma operação; com vários núcleos, as duas threads podem até executar a mesma linha no mesmo instante. O computador usado para testar os exemplos tinha 12 núcleos.
+
+\subsection{Por que usar threads}
+
+\begin{itemize}
+    \item \textbf{Responsividade}: um programa com interface gráfica pode continuar respondendo ao usuário enquanto uma thread faz um cálculo demorado. A simulação desta aula faz exatamente isso.
+    \item \textbf{Compartilhamento}: as threads já enxergam os mesmos dados; não é preciso pipe nem cópia.
+    \item \textbf{Economia}: criar uma thread é bem mais barato do que criar um processo, porque não é preciso montar um novo espaço de endereçamento nem copiar tabelas. Trocar de uma thread para outra do mesmo processo também é mais barato.
+    \item \textbf{Aproveitar vários núcleos}: um processo com uma thread só usa um núcleo de cada vez; com várias, pode usar vários.
+\end{itemize}
+
+\subsection{Threads do usuário e threads do núcleo}
+
+Uma thread pode ser gerenciada de dois jeitos:
+
+\begin{itemize}
+    \item \textbf{Threads do usuário}: uma biblioteca, dentro do processo, cria e alterna as threads. O núcleo do SO só enxerga um processo. É rápido, mas se uma thread fizer uma chamada de sistema bloqueante, todas param, e não há como usar vários núcleos.
+    \item \textbf{Threads do núcleo}: o próprio SO conhece cada thread e a escalona como se fosse um processo leve. Uma thread bloqueada não trava as outras, e threads diferentes podem rodar em núcleos diferentes.
+\end{itemize}
+
+Os modelos que combinam os dois são chamados \textbf{N:1} (várias threads do usuário sobre uma do núcleo), \textbf{1:1} (cada thread do usuário é uma thread do núcleo) e \textbf{M:N} (várias sobre várias). No Linux, a biblioteca \cmd{pthread} (NPTL) usa o modelo \textbf{1:1}: cada \cmd{pthread\_create} cria uma tarefa no núcleo pela chamada de sistema \cmd{clone()}, a mesma família do \cmd{fork()}, só que pedindo para compartilhar a memória em vez de copiá-la. As threads do Java tradicional também são 1:1; a partir do Java 21 existem também as \emph{threads virtuais}, no modelo M:N.
+
+\subsection{A ordem de execução não é sua}
+
+O escalonador do Linux é \textbf{preemptivo}: ele pode tirar uma thread da CPU a qualquer momento, por exemplo quando acaba a sua fatia de tempo ou quando chega uma interrupção. Não há como o programa saber em qual instrução isso vai acontecer. Por isso, quando duas threads usam o mesmo dado, precisamos raciocinar sobre \textbf{todas} as ordens possíveis, não só sobre a mais provável.
+
+% ============================================================
+\section{Condição de corrida}
+% ============================================================
+
+\subsection{\texttt{contador++} não é uma operação só}
+
+Para nós, \cmd{contador++} parece uma coisa única. Para o processador, são três passos:
+
+\begin{enumerate}
+    \item \textbf{ler} o valor da memória para um registrador;
+    \item \textbf{somar 1} no registrador;
+    \item \textbf{escrever} o registrador de volta na memória.
+\end{enumerate}
+
+Entre um passo e outro, o escalonador pode tirar a thread da CPU e colocar outra. Num computador com vários núcleos, as duas threads podem até executar esses passos \emph{ao mesmo tempo}.
+
+\subsection{O que o processador realmente executa}
+
+Compilando o \cmd{corrida.c} sem otimização (\cmd{gcc -O0 -S}), a linha \cmd{contador = contador + 1} vira três instruções de máquina (x86-64):
+
+\begin{lstlisting}[style=terminal]
+movl  contador(%rip), %eax     # 1. le contador da memoria para o registrador eax
+addl  $1, %eax                 # 2. soma 1 no registrador
+movl  %eax, contador(%rip)     # 3. escreve eax de volta na memoria
+\end{lstlisting}
+
+Com otimização (\cmd{-O2}), o gcc gera uma instrução só:
+
+\begin{lstlisting}[style=terminal]
+addl  $1, contador(%rip)       # soma 1 direto na memoria
+\end{lstlisting}
+
+E mesmo assim os incrementos se perdem. Uma instrução só \textbf{não} é o mesmo que uma operação atômica: por dentro, o processador ainda lê o valor, soma e escreve, e outro núcleo pode ler o valor antigo no meio. Para que essa soma seja indivisível entre núcleos, é preciso o prefixo \cmd{lock} (\cmd{lock addl}), que é justamente o que o compilador gera quando usamos \cmd{atomic\_fetch\_add} (Seção~\ref{sec:hardware}).
+
+\subsection{Uma intercalação que perde um incremento}\label{sec:intercalacao}
+
+Contador começa em 0 e cada thread quer somar 1. O esperado é 2.
+
+\begin{center}
+\begin{tabular}{@{}clll@{}}
+\toprule
+\textbf{Passo} & \textbf{Thread A} & \textbf{Thread B} & \textbf{contador na memória} \\
+\midrule
+1 & lê 0 & & 0 \\
+2 & & lê 0 & 0 \\
+3 & calcula 1 & & 0 \\
+4 & & calcula 1 & 0 \\
+5 & escreve 1 & & 1 \\
+6 & & escreve 1 & \textbf{1} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+As duas threads leram 0 antes de qualquer uma escrever. A escrita de B apagou a de A, e um incremento se perdeu.
+
+\begin{definicao}[Condição de corrida]
+Situação em que o resultado de um programa depende da \textbf{ordem} em que as threads foram intercaladas. Como essa ordem muda a cada execução, o resultado também muda, e o erro pode aparecer só de vez em quando.
+\end{definicao}
+
+\subsection{Quantas intercalações existem}
+
+Cada thread executa três passos em ordem (ler, somar, escrever), mas os passos de uma podem se encaixar de qualquer jeito entre os da outra. O número de intercalações possíveis é o número de maneiras de escolher, entre 6 posições, as 3 da thread A:
+
+\[
+\binom{6}{3} = \frac{6!}{3!\,3!} = 20.
+\]
+
+O resultado só sai correto (2) quando uma thread lê o valor \emph{depois} que a outra escreveu, e isso exige que uma delas faça os três passos inteiros antes de a outra começar. Das 20 intercalações, só \textbf{2} dão certo (AAABBB e BBBAAA); as outras 18 perdem um incremento.
+
+Na prática, as trocas de thread não acontecem a cada instrução: uma thread costuma executar milhares de voltas do laço antes de ser interrompida. Por isso nem toda volta perde um incremento. Mas com um milhão de voltas por thread, e com as duas rodando em núcleos diferentes ao mesmo tempo, as janelas ruins aparecem centenas de milhares de vezes.
+
+\subsection{Um exemplo do mundo real: a conta bancária}
+
+Imagine uma conta com R\$ 100 e duas operações de saque de R\$ 80 feitas ao mesmo tempo, cada uma por uma thread:
+
+\begin{lstlisting}[style=codigo]
+if (saldo >= valor)          /* 1. confere se ha saldo        */
+    saldo = saldo - valor;   /* 2. desconta                   */
+\end{lstlisting}
+
+Se as duas threads executam o passo 1 antes de qualquer uma executar o passo 2, as duas veem \cmd{saldo = 100}, as duas aprovam o saque e a conta termina com R\$ $-60$, ou com R\$ 20 se uma escrita apagar a outra. O problema não está em nenhuma linha isolada: está no fato de que ``conferir e agir'' precisa acontecer \textbf{sem interrupção}. Esse padrão, chamado \emph{check-then-act}, é uma das formas mais comuns de condição de corrida.
+
+\subsection{Por que o erro é difícil de achar}
+
+\begin{itemize}
+    \item Ele é \textbf{intermitente}: depende da ordem das threads, que muda com a carga da máquina, o número de núcleos e até com a presença de um \cmd{printf} de depuração.
+    \item Um teste que passou mil vezes \textbf{não prova} que o programa está certo; prova só que a intercalação ruim não apareceu nessas mil vezes.
+    \item Às vezes o erro some quando o programa é executado no depurador, porque o depurador muda os tempos. Esse tipo de erro ganhou o apelido de \emph{heisenbug}.
+\end{itemize}
+
+Condições de corrida já causaram acidentes reais. A mais citada é a da máquina de radioterapia Therac-25 (1985 a 1987): uma corrida entre a tarefa que lia o teclado do operador e a que configurava o feixe fez a máquina aplicar doses muito acima do previsto em alguns pacientes.
+
+\subsection{O programa corrida.c}
+
+\lstinputlisting[style=arquivo]{\raiz/examples/dia07/corrida.c}
+
+Algumas execuções reais:
+
+\begin{lstlisting}[style=terminal]
+$ ./corrida
+Contador: 1006933 (esperado: 2000000)
+Perdemos 993067 incrementos por causa da condicao de corrida.
+$ ./corrida
+Contador: 1349235 (esperado: 2000000)
+Perdemos 650765 incrementos por causa da condicao de corrida.
+$ ./corrida
+Contador: 1022204 (esperado: 2000000)
+Perdemos 977796 incrementos por causa da condicao de corrida.
+\end{lstlisting}
+
+Quase metade dos incrementos se perde, e o número é diferente a cada vez.
+
+\begin{alerta}[Data race e comportamento indefinido]
+Em C, duas threads acessando a mesma variável sem sincronização, com pelo menos uma escrevendo, é uma \textbf{data race}, e o padrão diz que o comportamento é \textbf{indefinido}. Não é correto afirmar que ``o resultado só pode ser um pouco menor''. O \cmd{volatile} do programa não conserta nada: ele só impede o compilador de juntar o milhão de somas numa conta única, para que a corrida apareça. Acrescentar \cmd{sleep} também não conserta: só muda a probabilidade.
+\end{alerta}
+
+% ============================================================
+\section{Região crítica e exclusão mútua}
+% ============================================================
+
+\subsection{Definições}
+
+\begin{definicao}
+A \textbf{região crítica} é o trecho do código que acessa um recurso compartilhado (no \cmd{corrida.c}, a linha \cmd{contador = contador + 1}).
+
+A \textbf{exclusão mútua} é a garantia de que no máximo \textbf{uma} thread por vez esteja dentro da região crítica.
+\end{definicao}
+
+Se só uma thread por vez pode executar ``ler, somar, escrever'', a intercalação da Seção~\ref{sec:intercalacao} se torna impossível e nenhum incremento se perde.
+
+\subsection{O que uma boa solução precisa garantir}\label{sec:condicoes}
+
+Tanenbaum lista quatro condições:
+
+\begin{enumerate}
+    \item Duas threads nunca estão ao mesmo tempo na região crítica.
+    \item A solução não depende da velocidade das threads nem do número de CPUs.
+    \item Uma thread fora da região crítica não pode impedir outra de entrar.
+    \item Nenhuma thread espera para sempre para entrar.
+\end{enumerate}
+
+\subsection{Por que uma simples variável de trava não funciona}
+
+Uma ideia ingênua é usar uma variável \cmd{trava}: 0 significa livre, 1 significa ocupado.
+
+\begin{lstlisting}[style=codigo]
+while (trava == 1) { }   /* espera ficar livre */
+trava = 1;               /* ocupa */
+/* regiao critica */
+trava = 0;               /* libera */
+\end{lstlisting}
+
+O problema é o mesmo do \cmd{contador++}: entre \emph{ver} que a trava está livre e \emph{escrever} 1 nela, a outra thread pode fazer o mesmo teste. As duas veem 0, as duas escrevem 1 e as duas entram. A própria trava sofre condição de corrida. Precisamos de um protocolo mais cuidadoso, ou de ajuda do hardware e do sistema operacional.
+
+\subsection{Desabilitar interrupções}
+
+Numa máquina com \textbf{uma} CPU, a thread só perde o processador por causa de uma interrupção (do relógio, de um dispositivo). Se ela desabilitar as interrupções antes da região crítica e reabilitar depois, ninguém a interrompe. Essa solução tem dois problemas graves:
+
+\begin{itemize}
+    \item Só o \textbf{núcleo do SO} pode desabilitar interrupções. Dar esse poder a um programa de usuário permitiria que ele travasse a máquina inteira.
+    \item Com \textbf{vários núcleos}, desabilitar as interrupções de um núcleo não impede que outro núcleo execute a mesma região crítica.
+\end{itemize}
+
+O próprio núcleo ainda usa essa técnica por instantes muito curtos, mas ela não serve para programas comuns.
+
+\subsection{Alternância estrita}
+
+Outra ideia é uma variável \cmd{vez} que diz de quem é a vez de entrar:
+
+\begin{lstlisting}[style=codigo]
+/* thread 0 */                         /* thread 1 */
+while (vez != 0) { }                   while (vez != 1) { }
+/* regiao critica */                   /* regiao critica */
+vez = 1;                               vez = 0;
+\end{lstlisting}
+
+Ela garante a exclusão mútua, mas \textbf{viola a condição 3}: as threads são obrigadas a se alternar. Se a thread 0 quer entrar duas vezes seguidas e a thread 1 está ocupada com outra coisa, fora da região crítica, a thread 0 fica esperando por uma thread que não está nem tentando entrar. Peterson resolve exatamente esse defeito, combinando \cmd{vez} com as bandeiras \cmd{interessado}.
+
+\subsection{Ajuda do hardware: instruções atômicas}\label{sec:hardware}
+
+Os processadores modernos oferecem instruções que leem e escrevem uma posição de memória \textbf{numa operação indivisível}, mesmo com vários núcleos:
+
+\begin{center}
+\begin{tabular}{@{}lR{0.62\linewidth}@{}}
+\toprule
+\textbf{Instrução} & \textbf{O que faz, de forma indivisível} \\
+\midrule
+\emph{test-and-set} (TSL) & Lê o valor antigo e escreve 1. Se o antigo era 0, a trava estava livre e agora é minha. \\
+\emph{exchange} (\cmd{xchg}) & Troca o conteúdo de um registrador com o de uma posição de memória. \\
+\emph{compare-and-swap} (\cmd{cmpxchg}) & Se a memória ainda tem o valor esperado, troca pelo novo; senão, não mexe e avisa. \\
+\emph{fetch-and-add} (\cmd{lock xadd}) & Soma um valor e devolve o antigo. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Com \emph{test-and-set}, a variável de trava da seção anterior passa a funcionar, porque ``ver que está livre'' e ``ocupar'' viram um passo só. Em C11, isso é o \cmd{atomic\_flag}:
+
+\begin{lstlisting}[style=codigo]
+static atomic_flag ocupado = ATOMIC_FLAG_INIT;
+
+void entrar(void) { while (atomic_flag_test_and_set(&ocupado)) { } }  /* gira */
+void sair(void)   { atomic_flag_clear(&ocupado); }
+\end{lstlisting}
+
+Uma trava assim, em que quem espera fica girando, se chama \textbf{spinlock}. Ela funciona para qualquer número de threads (Peterson, só para duas), mas ainda é espera ocupada.
+
+\subsection{Consertando o corrida.c}
+
+Há três jeitos de consertar o \cmd{corrida.c}, todos testados no repositório:
+
+\begin{center}
+\begin{tabular}{@{}lR{0.5\linewidth}c@{}}
+\toprule
+\textbf{Conserto} & \textbf{Como funciona} & \textbf{Tempo medido} \\
+\midrule
+\cmd{atomic\_fetch\_add} & A própria soma vira indivisível (\cmd{lock addl}). Não há região crítica: há uma operação atômica. & 0{,}02 s \\
+\cmd{pthread\_mutex\_t} & Região crítica com trava. Quem encontra a trava ocupada dorme. & 0{,}10 s \\
+spinlock (\cmd{atomic\_flag}) & Região crítica com trava. Quem encontra a trava ocupada gira. & 0{,}10 s \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Os três dão sempre 2000000. Os tempos são de uma execução na máquina de teste (12 núcleos), para 2 milhões de incrementos; servem só para comparar a ordem de grandeza. A operação atômica é a mais rápida porque cada soma é uma instrução só; as travas têm o custo extra de entrar e sair. Quando a região crítica é uma única operação simples, a operação atômica é a escolha natural; quando a região crítica tem várias linhas, como inserir num buffer, é preciso uma trava.
+
+\lstinputlisting[style=arquivo, firstline=12]{\raiz/examples/dia07/corrida_atomic.c}
+
+\lstinputlisting[style=arquivo, firstline=11]{\raiz/examples/dia07/corrida_mutex.c}
+
+% ============================================================
+\section{O algoritmo de Peterson}
+% ============================================================
+
+\subsection{A ideia}
+
+Peterson resolve a exclusão mútua para \textbf{duas} threads usando só leituras e escritas comuns na memória (com a ordem garantida). Cada thread tem uma bandeira \cmd{interessado} e existe uma variável \cmd{vez} compartilhada:
+
+\begin{lstlisting}[style=terminal]
+/* entrada */
+interessado[eu] = verdadeiro          "quero entrar"
+vez = outro                           "mas, se houver empate, você primeiro"
+enquanto interessado[outro] e vez == outro:
+    esperar
+
+/* região crítica */
+
+/* saída */
+interessado[eu] = falso               "saí, não quero mais"
+\end{lstlisting}
+
+\subsection{Os dois cenários}
+
+\begin{center}
+\begin{tabular}{@{}R{0.36\linewidth}R{0.55\linewidth}@{}}
+\toprule
+\textbf{Situação} & \textbf{O que acontece} \\
+\midrule
+O outro não quer entrar & \cmd{interessado[outro]} é falso: a condição do \cmd{enquanto} falha e eu entro direto. Não há alternância forçada. \\
+Os dois querem entrar ao mesmo tempo & Os dois escrevem em \cmd{vez}. Só um valor fica: o da thread que escreveu \textbf{por último}. Essa thread vê \cmd{vez == outro} e espera; a outra entra. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Quando a thread que entrou sai, ela faz \cmd{interessado = falso}, e a que estava esperando passa.
+
+\subsection{Por que Peterson está correto}
+
+Peterson cumpre as condições da Seção~\ref{sec:condicoes}. Um argumento informal:
+
+\subsubsection{Exclusão mútua}
+Suponha, por absurdo, que as duas threads estão na região crítica ao mesmo tempo. Então as duas escreveram \cmd{interessado = verdadeiro} e as duas escreveram em \cmd{vez}. A variável \cmd{vez} guarda um único valor: o da thread que escreveu por último, digamos a thread 1, que escreveu \cmd{vez = 0}. Quando a thread 1 testou o \cmd{enquanto}, viu \cmd{interessado[0]} verdadeiro e \cmd{vez == 0}, ou seja, a condição verdadeira, e teria de esperar. Ela só sairia do laço se a thread 0 mudasse \cmd{interessado[0]} para falso, o que só acontece quando a thread 0 \textbf{sai} da região crítica. Contradição: as duas não podem estar dentro ao mesmo tempo.
+
+\subsubsection{Progresso}
+Se só uma thread quer entrar, \cmd{interessado[outro]} é falso e ela entra sem esperar. Uma thread que não está interessada não atrapalha ninguém: é a condição 3, que a alternância estrita violava.
+
+\subsubsection{Espera limitada}
+Se as duas querem entrar, a que esperou entra assim que a outra sair, porque a outra, ao tentar entrar de novo, escreve \cmd{vez = outro} e cede a vez. Nenhuma thread pode passar na frente da outra duas vezes seguidas enquanto a outra está esperando.
+
+\subsection{Peterson em C}
+
+\lstinputlisting[style=arquivo]{\raiz/peterson-code.c}
+
+\begin{lstlisting}[style=terminal]
+$ ./peterson
+Regiao critica: thread0
+Regiao critica: thread1#######
+Contador: 20000 (esperado: 20000)
+\end{lstlisting}
+
+\subsubsection{Por que atomics}
+Com variáveis comuns, o compilador e o processador podem \textbf{reordenar} leituras e escritas para ganhar desempenho, desde que uma thread sozinha não perceba. Peterson depende de a escrita em \cmd{interessado} acontecer antes da leitura de \cmd{vez} e do \cmd{interessado} do outro. As funções \cmd{atomic\_store} e \cmd{atomic\_load} do C11 garantem essa ordem.
+
+\subsubsection{O que dá errado sem a ordem garantida}
+Processadores modernos têm \emph{buffers de escrita}: uma escrita pode ficar guardada no núcleo por um instante antes de chegar à memória que os outros núcleos enxergam, enquanto a leitura seguinte já é feita. Se isso acontecer em Peterson, a sequência pode ser:
+
+\begin{enumerate}
+    \item a thread 0 escreve \cmd{interessado[0] = 1}, mas a escrita fica no buffer do núcleo 0;
+    \item a thread 1 escreve \cmd{interessado[1] = 1}, que fica no buffer do núcleo 1;
+    \item as duas leem o \cmd{interessado} da outra na memória e veem \cmd{0};
+    \item as duas acham que a outra não quer entrar, e as duas entram.
+\end{enumerate}
+
+As operações atômicas com ordenação \emph{sequencialmente consistente} (o padrão de \cmd{atomic\_load} e \cmd{atomic\_store}) obrigam o processador a esvaziar o buffer antes de seguir, como se todas as operações de todas as threads acontecessem numa única ordem global. Esse acordo entre a linguagem e o hardware sobre a ordem das leituras e escritas se chama \textbf{modelo de memória}.
+
+\subsection{Espera ocupada}
+
+Enquanto espera, a thread fica girando no \cmd{while}: testa, testa, testa de novo. Isso é \textbf{espera ocupada} (\emph{busy waiting}).
+
+\begin{itemize}
+    \item A thread gasta CPU sem fazer trabalho útil.
+    \item Com uma única CPU, ela pode até atrasar a thread que está na região crítica e precisa sair.
+    \item Peterson também só funciona para duas threads; para mais, existem generalizações mais complicadas.
+\end{itemize}
+
+Seria melhor que a thread que não pode entrar \textbf{dormisse} e fosse \textbf{acordada} quando a região ficasse livre. É isso que os semáforos oferecem.
+
+\subsection{Quando girar compensa}
+
+A espera ocupada não é sempre ruim. Colocar uma thread para dormir e acordá-la depois exige uma \textbf{troca de contexto}, que custa alguns microssegundos. Se a região crítica é curtíssima e a outra thread está rodando em outro núcleo, girar alguns ciclos pode sair mais barato do que dormir. Por isso o núcleo do Linux usa spinlocks internamente, e implementações de mutex costumam girar um pouco antes de desistir e dormir.
+
+Girar é ruim quando a espera pode ser longa, ou quando há uma CPU só: a thread que gira ocupa justamente o processador de que a outra precisa para terminar.
+
+\begin{alerta}[Inversão de prioridade]
+Com espera ocupada e prioridades, pode acontecer de uma thread de alta prioridade girar esperando uma trava que está com uma thread de baixa prioridade, que nunca recebe a CPU para soltá-la. Um problema desse tipo, com travas e prioridades, fez o robô Mars Pathfinder reiniciar repetidamente em Marte, em 1997, até ser corrigido por uma atualização enviada da Terra.
+\end{alerta}
+
+% ============================================================
+\section{Semáforos}
+% ============================================================
+
+\subsection{Dormir e acordar: o despertar perdido}
+
+Para evitar a espera ocupada, imagine duas operações do SO: \cmd{dormir()}, que suspende a thread, e \cmd{acordar(t)}, que a libera. Um consumidor ingênuo faria:
+
+\begin{lstlisting}[style=codigo]
+if (count == 0) dormir();      /* buffer vazio: dorme */
+/* retira um item */
+\end{lstlisting}
+
+e o produtor, depois de inserir, \cmd{if (count == 1) acordar(consumidor);}. O defeito: o consumidor lê \cmd{count == 0} e, \textbf{antes} de chamar \cmd{dormir()}, perde a CPU. O produtor insere, vê \cmd{count == 1} e chama \cmd{acordar}, mas o consumidor ainda não está dormindo, e o aviso se perde. Quando o consumidor volta, dorme, e nunca mais é acordado. O produtor enche o buffer e também dorme. Os dois dormem para sempre.
+
+A causa é a mesma de sempre: ``testar a condição'' e ``dormir'' precisam ser \textbf{uma operação só}. Em 1965, Edsger Dijkstra propôs uma variável que guarda os avisos não usados e faz o teste e a espera de forma indivisível: o \textbf{semáforo}. Os nomes originais das operações vêm do holandês: \textbf{P} (\emph{proberen}, testar) e \textbf{V} (\emph{verhogen}, incrementar).
+
+\subsection{Definição}
+
+\begin{definicao}
+Um \textbf{semáforo} é um contador inteiro que nunca fica negativo, com duas operações atômicas:
+
+\cmd{sem\_wait(\&s)} (também chamada \emph{down} ou P): se \cmd{s > 0}, diminui 1 e segue; se \cmd{s == 0}, a thread \textbf{dorme} até que alguém faça \cmd{sem\_post}.
+
+\cmd{sem\_post(\&s)} (também chamada \emph{up} ou V): soma 1 e, se houver thread dormindo em \cmd{s}, acorda uma.
+\end{definicao}
+
+O teste, a alteração do contador e a decisão de dormir são feitos \textbf{atomicamente} pelo sistema: não há a corrida que estragou a variável de trava.
+
+\begin{exemplo}[Analogia: estacionamento com placa de vagas]
+O valor do semáforo é o número na placa de vagas. Quem chega e vê 0 espera parado na entrada, sem ficar dando voltas no quarteirão (isso seria a espera ocupada). Quem sai, soma uma vaga na placa e libera o próximo da fila.
+\end{exemplo}
+
+\subsection{Como o semáforo funciona por dentro}
+
+Um semáforo é, no núcleo do SO, um contador e uma \textbf{fila} de threads que esperam:
+
+\begin{lstlisting}[style=terminal]
+sem_wait(s):                           sem_post(s):
+    [início da parte indivisível]          [início da parte indivisível]
+    se s.valor > 0:                        se a fila de s não está vazia:
+        s.valor = s.valor - 1                  tira uma thread da fila
+    senão:                                     e a marca como pronta
+        coloca esta thread na fila         senão:
+        e a bloqueia (não gasta CPU)           s.valor = s.valor + 1
+    [fim da parte indivisível]             [fim da parte indivisível]
+\end{lstlisting}
+
+A ``parte indivisível'' é garantida pelo núcleo com as ferramentas da Seção~\ref{sec:hardware}: um spinlock curtíssimo, só durante a atualização do contador e da fila. Ou seja, a espera ocupada não desapareceu: ela ficou restrita a poucas instruções, dentro do SO, em vez de durar a região crítica inteira. A espera longa, essa sim, vira bloqueio.
+
+No Linux, a biblioteca ainda faz uma otimização: se o semáforo está livre, \cmd{sem\_wait} resolve tudo com uma operação atômica, sem nem chamar o núcleo. Só quando é preciso dormir é que entra a chamada de sistema \cmd{futex}.
+
+\subsection{Semáforo como mutex}
+
+Um semáforo que começa em \textbf{1} funciona como uma \textbf{chave}:
+
+\begin{lstlisting}[style=codigo]
+sem_init(&mutex, 0, 1);    /* 1: a chave esta disponivel */
+
+sem_wait(&mutex);          /* pega a chave (se outra thread tiver, dorme) */
+contador = contador + 1;   /* regiao critica */
+sem_post(&mutex);          /* devolve a chave */
+\end{lstlisting}
+
+Com isso, o \cmd{corrida.c} daria sempre 2000000. Um semáforo assim, que só vale 0 ou 1, é chamado de \textbf{semáforo binário} ou \textbf{mutex} (de \emph{mutual exclusion}). Um semáforo que conta mais do que 1 é um \textbf{semáforo contador}.
+
+\subsection{Mutex e semáforo binário não são idênticos}
+
+Os dois começam livres e deixam passar uma thread por vez, mas há uma diferença conceitual:
+
+\begin{itemize}
+    \item Um \textbf{mutex} tem \textbf{dono}: só a thread que travou pode destravar. Em \cmd{pthread\_mutex\_t} (com o tipo de verificação de erros), destravar um mutex que é de outra thread é um erro.
+    \item Um \textbf{semáforo} não tem dono: qualquer thread pode fazer \cmd{sem\_post}. Isso é o que permite usar \cmd{full} e \cmd{empty} como \textbf{sinais} entre threads: o produtor faz \cmd{sem\_post(\&full)} e quem faz \cmd{sem\_wait(\&full)} é outra thread.
+\end{itemize}
+
+Regra prática: para proteger uma região crítica, use um mutex; para contar recursos ou sinalizar eventos entre threads, use um semáforo. O \cmd{prod\_cons.c} usa um semáforo binário como mutex por fidelidade ao exemplo clássico; com \cmd{pthread\_mutex\_t} funcionaria igual.
+
+\subsection{Funções POSIX}
+
+\begin{center}
+\begin{tabular}{@{}lR{0.62\linewidth}@{}}
+\toprule
+\textbf{Função} & \textbf{O que faz} \\
+\midrule
+\cmd{sem\_init(\&s, 0, v)} & Cria o semáforo com valor inicial \cmd{v}. O \cmd{0} diz que ele é compartilhado entre threads do mesmo processo. \\
+\cmd{sem\_wait(\&s)} & Espera e decrementa. Pode ser interrompida por sinal (\cmd{EINTR}); por isso o \cmd{prod\_cons.c} tem o \emph{helper} \cmd{wait\_sem}, que tenta de novo. \\
+\cmd{sem\_post(\&s)} & Incrementa e acorda uma thread que espera. \\
+\cmd{sem\_destroy(\&s)} & Libera o semáforo quando ninguém mais o usa. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================
+\section{O problema do produtor-consumidor}
+% ============================================================
+
+\subsection{O problema}
+
+Uma thread \textbf{produz} itens e os coloca num buffer de tamanho \cmd{N}; outra \textbf{consome} itens desse buffer. As duas trabalham em ritmos diferentes. Precisamos garantir três coisas:
+
+\begin{enumerate}
+    \item As duas nunca mexem no buffer ao mesmo tempo (\textbf{exclusão mútua}).
+    \item O produtor não insere com o buffer cheio (\textbf{espera por vaga}).
+    \item O consumidor não retira com o buffer vazio (\textbf{espera por item}).
+\end{enumerate}
+
+\begin{center}
+\begin{tikzpicture}[
+    cel/.style={draw=mDarkTeal, minimum width=1.05cm, minimum height=0.8cm, font=\ttfamily\small, fill=white},
+    chei/.style={cel, fill=mLightBrown!25}]
+    \node[proc] (prod) at (-1.2,0) {Produtor};
+    \node[chei] (c0) at (2.0,0) {7};
+    \node[chei] (c1) at (3.05,0) {42};
+    \node[chei] (c2) at (4.1,0) {13};
+    \node[cel] (c3) at (5.15,0) {};
+    \node[cel] (c4) at (6.2,0) {};
+    \foreach \i in {0,...,4} \node[font=\tiny, below=1pt of c\i] {\i};
+    \node[proc] (cons) at (9.4,0) {Consumidor};
+    \draw[setad] (prod) -- (c0.west);
+    \draw[setad] (c4.east) -- (cons);
+    \node[font=\scriptsize\bfseries, text=mLightBrown, above=0.15cm of c3] {\texttt{hi}};
+    \node[font=\scriptsize\bfseries, text=mDarkTeal, above=0.15cm of c0] {\texttt{lo}};
+\end{tikzpicture}
+\end{center}
+
+O buffer é \textbf{circular}: \cmd{hi} é a próxima posição de escrita e \cmd{lo} a próxima de leitura. Os dois índices avançam com \cmd{(i + 1) \% N}, e depois da última posição voltam para a 0. Assim as posições são reaproveitadas e a ordem de chegada é mantida (FIFO).
+
+\subsection{Os três semáforos}
+
+\begin{center}
+\begin{tabular}{@{}llR{0.55\linewidth}@{}}
+\toprule
+\textbf{Semáforo} & \textbf{Começa em} & \textbf{O que controla} \\
+\midrule
+\cmd{mutex} & 1 & \textbf{Exclusão mútua}: a chave do buffer. \\
+\cmd{empty} & \cmd{N} & \textbf{Disponibilidade}: quantas vagas livres existem. \\
+\cmd{full} & 0 & \textbf{Disponibilidade}: quantos itens prontos existem. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{definicao}[Dois problemas diferentes]
+O \cmd{mutex} responde ``\textbf{posso mexer no buffer agora?}''. Os semáforos \cmd{empty} e \cmd{full} respondem ``\textbf{tem o que eu preciso?}''. Confundir os dois é o erro mais comum neste problema.
+\end{definicao}
+
+\subsection{Os passos de cada thread}
+
+\begin{center}
+\begin{tabular}{@{}cR{0.42\linewidth}R{0.42\linewidth}@{}}
+\toprule
+\textbf{Passo} & \textbf{Produtor} & \textbf{Consumidor} \\
+\midrule
+1 & \cmd{sem\_wait(\&empty)}: reserva uma vaga & \cmd{sem\_wait(\&full)}: reserva um item \\
+2 & \cmd{sem\_wait(\&mutex)}: pega a chave & \cmd{sem\_wait(\&mutex)}: pega a chave \\
+3 & insere no buffer & retira do buffer \\
+4 & \cmd{sem\_post(\&mutex)}: devolve a chave & \cmd{sem\_post(\&mutex)}: devolve a chave \\
+5 & \cmd{sem\_post(\&full)}: avisa que há mais um item & \cmd{sem\_post(\&empty)}: avisa que há mais uma vaga \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{exemplo}[Regra para lembrar]
+Cada thread \textbf{espera o que consome} e \textbf{avisa o que cria}. O produtor consome vagas e cria itens; o consumidor consome itens e cria vagas.
+\end{exemplo}
+
+\subsection{Simulação com N = 3}
+
+Valores logo depois de cada operação terminar:
+
+\begin{center}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Evento} & \textbf{empty} & \textbf{full} & \textbf{count} \\
+\midrule
+início & 3 & 0 & 0 \\
+produz A & 2 & 1 & 1 \\
+produz B & 1 & 2 & 2 \\
+consome A & 2 & 1 & 1 \\
+produz C & 1 & 2 & 2 \\
+produz D & 0 & 3 & 3 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Se o produtor tentar um quinto item, \cmd{empty} vale 0 e ele dorme em \cmd{sem\_wait(\&empty)}, \textbf{sem segurar o mutex}, até o consumidor liberar uma vaga.
+
+Repare que \cmd{empty + full = N} em todas as linhas. Isso vale sempre que nenhuma operação está em andamento; no meio de uma operação (depois do \cmd{sem\_wait} e antes do \cmd{sem\_post}), a soma pode ficar menor por um instante.
+
+\subsection{O programa prod\_cons.c}
+
+\lstinputlisting[style=arquivo]{\raiz/prod_cons.c}
+
+\begin{lstlisting}[style=terminal]
+$ ./prod_cons
+Produzido: 29 | ocupacao: 1/20
+Produzido: 51 | ocupacao: 2/20
+Produzido: 63 | ocupacao: 3/20
+...
+Fim: 40 itens produzidos e consumidos; buffer vazio.
+\end{lstlisting}
+
+A ordem das linhas ``Produzido'' e ``Consumido'' muda a cada execução, mas os itens sempre são consumidos na mesma ordem em que foram produzidos.
+
+\subsection{Por que a ordem dos sem\_wait importa}
+
+Suponha que o consumidor pegasse a chave \emph{antes} de esperar por item:
+
+\begin{lstlisting}[style=codigo]
+wait_sem(&mutex);   /* pega a chave...     */
+wait_sem(&full);    /* ...e dorme com ela  */
+\end{lstlisting}
+
+Com o buffer vazio:
+
+\begin{enumerate}
+    \item O consumidor pega o \cmd{mutex}.
+    \item Dorme em \cmd{full}, \textbf{segurando a chave}.
+    \item O produtor tenta pegar o \cmd{mutex} para inserir e também dorme.
+\end{enumerate}
+
+\begin{center}
+\begin{tikzpicture}[node distance=3cm]
+    \node[proc] (c) {Consumidor\\\scriptsize tem o \texttt{mutex}};
+    \node[proc, right=of c] (p) {Produtor\\\scriptsize quer o \texttt{mutex}};
+    \draw[setad, bend left=22] (c) to node[rotulo, above] {espera um item do produtor} (p);
+    \draw[setad, bend left=22] (p) to node[rotulo, below] {espera a chave do consumidor} (c);
+\end{tikzpicture}
+\end{center}
+
+\begin{alerta}[Deadlock]
+Cada thread espera algo que só a outra pode fornecer. Nenhuma avança, e o programa trava para sempre. Por isso, nas duas threads, \textbf{primeiro se espera a disponibilidade, depois se pega a chave}.
+\end{alerta}
+
+\subsection{Vários produtores e vários consumidores}
+
+O mesmo código funciona com várias threads produtoras e várias consumidoras, sem mudança nenhuma. \cmd{empty} e \cmd{full} continuam contando vagas e itens no total, e o \cmd{mutex} garante que duas produtoras nunca escrevam na mesma posição \cmd{hi} ao mesmo tempo. É por isso que o \cmd{mutex} é indispensável: sem ele, duas produtoras poderiam ler o mesmo \cmd{hi}, gravar na mesma posição e avançar o índice duas vezes, perdendo um item, que é a condição de corrida da Seção 3 de novo.
+
+% ============================================================
+\section{Deadlock, inanição e livelock}
+% ============================================================
+
+\subsection{As quatro condições do deadlock}
+
+Em 1971, Coffman e colegas mostraram que um deadlock só acontece se \textbf{quatro} condições valem ao mesmo tempo:
+
+\begin{center}
+\begin{tabular}{@{}lR{0.4\linewidth}R{0.33\linewidth}@{}}
+\toprule
+\textbf{Condição} & \textbf{O que significa} & \textbf{No consumidor errado} \\
+\midrule
+Exclusão mútua & O recurso só pode ser usado por um de cada vez. & Só uma thread tem o \cmd{mutex}. \\
+Posse e espera & Quem já tem um recurso espera por outro. & O consumidor tem o \cmd{mutex} e espera \cmd{full}. \\
+Não preempção & Ninguém pode tomar um recurso à força. & O SO não tira o \cmd{mutex} do consumidor. \\
+Espera circular & Existe um ciclo: A espera B, que espera A. & O consumidor espera o produtor, que espera o consumidor. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Basta quebrar \textbf{uma} delas para o deadlock ser impossível. A ordem correta do produtor-consumidor quebra a \textbf{posse e espera}: nenhuma thread espera por \cmd{empty} ou \cmd{full} segurando o \cmd{mutex}.
+
+\subsection{Como evitar na prática}
+
+\begin{itemize}
+    \item \textbf{Não dormir segurando uma trava} à espera de algo que outra thread só pode fazer com essa trava.
+    \item \textbf{Ordem global de aquisição}: se um programa usa as travas A e B, todas as threads pegam sempre A antes de B. Assim não se forma o ciclo (quebra a espera circular).
+    \item \textbf{Segurar travas pelo menor tempo possível}: fazer o trabalho demorado (cálculo, entrada e saída) fora da região crítica, como o comentário ``processamento do item fora do lock'' do \cmd{prod\_cons.c}.
+\end{itemize}
+
+\subsection{Inanição e livelock}
+
+\begin{definicao}
+\textbf{Inanição} (\emph{starvation}): uma thread fica esperando indefinidamente, não porque o sistema travou, mas porque as outras sempre passam na frente. O sistema progride; aquela thread, não.
+
+\textbf{Livelock}: as threads não estão bloqueadas, continuam executando, mas reagem umas às outras de um jeito que ninguém avança. A imagem clássica são duas pessoas num corredor que dão um passo para o mesmo lado ao mesmo tempo, repetidamente.
+\end{definicao}
+
+A condição 4 de Tanenbaum (ninguém espera para sempre) é justamente a ausência de inanição. Peterson a garante para duas threads; um mutex comum, em geral, não promete a ordem de chegada.
+
+% ============================================================
+\section{Monitores em Java}
+% ============================================================
+
+\subsection{Por que monitores}
+
+Semáforos resolvem o problema, mas deixam toda a disciplina nas mãos do programador. É fácil:
+
+\begin{itemize}
+    \item \textbf{esquecer} um \cmd{sem\_post}, e alguma thread dorme para sempre;
+    \item \textbf{trocar a ordem} de dois \cmd{sem\_wait}, e o programa entra em deadlock;
+    \item \textbf{proteger a coisa errada}, e a corrida continua.
+\end{itemize}
+
+\begin{definicao}[Monitor]
+Um \textbf{monitor} é um objeto que junta os \textbf{dados compartilhados}, as \textbf{operações} que os acessam e a \textbf{exclusão mútua} dessas operações. Quem usa o objeto não precisa lembrar de pegar e devolver a chave: a linguagem faz isso.
+\end{definicao}
+
+Uma analogia comum: um banheiro com uma \textbf{chave única}. Quem tem a chave entra; quem chega depois espera na porta. Se quem está dentro descobre que falta papel, pode sair, \textbf{devolver a chave} e esperar ser avisado de que o papel chegou.
+
+\subsection{Origem: Hoare e Brinch Hansen}
+
+O conceito de monitor foi proposto por Per Brinch Hansen e por C. A. R. Hoare, no início dos anos 1970 (o artigo mais citado é o de Hoare, de 1974). A ideia tem duas partes:
+
+\begin{enumerate}
+    \item \textbf{Exclusão mútua automática}: só uma thread por vez executa dentro do monitor. O compilador, e não o programador, insere o ``pegar a chave'' e o ``devolver a chave''.
+    \item \textbf{Variáveis de condição}: filas onde uma thread espera até que uma condição sobre os dados do monitor se torne verdadeira. As operações são \emph{wait} (esperar na condição, soltando o monitor) e \emph{signal} (acordar uma thread que espera na condição).
+\end{enumerate}
+
+Uma variável de condição \textbf{não guarda memória}, ao contrário do semáforo: um \emph{signal} sem ninguém esperando simplesmente se perde. Por isso a thread sempre testa a condição, sobre os dados do monitor, antes de esperar. Não há despertar perdido porque teste e espera acontecem dentro do monitor, com a chave na mão.
+
+Em Java, todo objeto pode ser um monitor, com \textbf{uma única} variável de condição implícita: \cmd{wait}, \cmd{notify} e \cmd{notifyAll} operam nela.
+
+\subsection{As ferramentas do Java}
+
+\begin{center}
+\begin{tabular}{@{}lR{0.68\linewidth}@{}}
+\toprule
+\textbf{Recurso} & \textbf{O que faz} \\
+\midrule
+\cmd{synchronized} & Para executar um método \cmd{synchronized}, a thread precisa da chave (lock) do objeto. Só uma thread por vez fica dentro dos métodos \cmd{synchronized} de um mesmo objeto. \\
+\cmd{wait()} & Solta a chave do objeto e dorme até ser avisada. Só pode ser chamado por quem tem a chave (senão, \cmd{IllegalMonitorStateException}). \\
+\cmd{notify()} & Acorda \textbf{uma} thread que dormia em \cmd{wait()} nesse objeto. Ela não recebe a chave na hora: precisa disputá-la de novo. \\
+\cmd{notifyAll()} & Acorda \textbf{todas}; cada uma, ao conseguir a chave, confere a sua condição. \\
+\cmd{Thread.sleep()} & Dorme por um tempo, mas \textbf{não solta a chave}. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Mailbox 3b: sem sincronização}
+
+O exemplo das pastas \cmd{Monitor/1} e \cmd{Monitor/3} tem uma caixa de correio compartilhada por dois produtores e um consumidor. Dave envia ``Hello, world.'' e Bill envia ``Hot dog!''. Na versão 3b não há nenhuma sincronização:
+
+\lstinputlisting[style=arquivojava, firstline=13, lastline=52, firstnumber=13]{\raiz/Monitor-20261002T192224Z-1-001/Monitor/1/Mailbox3b.java}
+
+\cmd{storeMessage} escreve a mensagem \textbf{letra por letra} no mesmo array, com uma pequena pausa entre as letras. Se os dois produtores chamam ao mesmo tempo, as letras se misturam. Saída real:
+
+\begin{lstlisting}[style=terminal]
+My name is, Bill. I say, Hello, worl
+My name is, Bill. I say, Hot dog!    .
+My name is, Dave. I say, Het dog!
+\end{lstlisting}
+
+Bill ``disse'' a frase de Dave, a mensagem foi cortada, e ``Het dog!'' é metade de cada um. É a condição de corrida de novo, agora em Java. O \cmd{Thread.sleep} entre as letras só aumenta a janela em que a outra thread pode entrar: por isso aumentar \cmd{MAXPROCESSTIME} deixa o problema mais visível.
+
+\subsection{Mailbox 3s: com monitor}
+
+\lstinputlisting[style=arquivojava, firstline=6, lastline=49, firstnumber=6]{\raiz/Monitor-20261002T192224Z-1-001/Monitor/3/Mailbox3s.java}
+
+\begin{itemize}
+    \item Os dois métodos são \cmd{synchronized}: enquanto um produtor escreve, o outro produtor e o consumidor esperam pela chave. As mensagens saem \textbf{íntegras}.
+    \item O consumidor, se não há mensagem, chama \cmd{wait()}: solta a chave (para que um produtor possa entrar) e dorme. Não fica perguntando ``chegou?'' o tempo todo.
+    \item O produtor, ao terminar, chama \cmd{notify()} e acorda o consumidor.
+\end{itemize}
+
+\subsection{Por que while e não if}
+
+O consumidor usa \cmd{while (youHaveMail == false) wait();}, e não um \cmd{if}. Motivos:
+
+\begin{enumerate}
+    \item Quem acorda \textbf{não recebe a chave na hora}: precisa disputá-la. Enquanto isso, outra thread pode entrar e mudar a condição.
+    \item O Java permite \textbf{despertares espúrios}: uma thread pode sair do \cmd{wait()} sem que ninguém tenha chamado \cmd{notify}.
+\end{enumerate}
+
+Com \cmd{while}, a thread confere a condição de novo ao acordar e só segue quando ela é verdadeira de fato.
+
+\subsection{Semântica de Hoare e semântica de Mesa}
+
+Quando uma thread faz \emph{signal} e acorda outra, quem continua executando dentro do monitor?
+
+\begin{itemize}
+    \item \textbf{Hoare} (\emph{signal and wait}): a thread acordada entra \textbf{imediatamente} no monitor, e quem sinalizou espera. A condição que motivou o aviso ainda é verdadeira quando a acordada roda, e um \cmd{if} bastaria.
+    \item \textbf{Mesa} (\emph{signal and continue}), do sistema Mesa da Xerox, em 1980: quem sinalizou \textbf{continua}, e a acordada só volta para a fila da chave. Até ela conseguir entrar, outra thread pode ter mudado tudo.
+\end{itemize}
+
+Java, pthreads (\cmd{pthread\_cond\_wait}) e quase todas as linguagens atuais usam a semântica de \textbf{Mesa}, que é mais simples de implementar e combina bem com despertares espúrios. Consequência prática, que vale para toda a vida: \textbf{espere sempre dentro de um \cmd{while}}.
+
+\subsection{O limite da mailbox 3s}
+
+\begin{alerta}[A 3s ainda pode perder mensagens]
+\cmd{storeMessage} não espera a caixa esvaziar. Se dois produtores guardam mensagens antes de o consumidor ler, a primeira é \textbf{sobrescrita}. A versão 3s garante que cada mensagem lida está \textbf{íntegra}, mas não garante que toda mensagem enviada seja \textbf{entregue}.
+\end{alerta}
+
+Uma caixa de uma posição sem perdas é exatamente o produtor-consumidor com \cmd{N = 1}. Com monitor, ficaria assim:
+
+\begin{lstlisting}[style=terminal]
+guardar(mensagem), synchronized:       retirar(), synchronized:
+    enquanto cheia: wait()                 enquanto vazia: wait()
+    copia a mensagem                       copia a mensagem para o resultado
+    cheia = verdadeiro                     cheia = falso
+    notifyAll()                            notifyAll()
+                                           devolve o resultado
+\end{lstlisting}
+
+Usa-se \cmd{notifyAll} porque, com dois produtores, um \cmd{notify} poderia acordar justamente o outro produtor (que veria a caixa cheia e voltaria a dormir) em vez do consumidor.
+
+\subsection{Uma caixa de correio correta, em Java}
+
+O pseudocódigo acima, escrito em Java e testado, está em \cmd{examples/dia07/caixa/}:
+
+\lstinputlisting[style=arquivojava]{\raiz/examples/dia07/caixa/CaixaDeCorreio.java}
+
+O \cmd{TesteCaixa.java} da mesma pasta põe dois produtores para enviar 20000 mensagens cada e confere o que chegou:
+
+\begin{lstlisting}[style=terminal]
+$ make run-caixa
+Recebidas de Dave: 20000 | de Bill: 20000 (esperado: 20000 de cada)
+\end{lstlisting}
+
+Nenhuma mensagem se perde, e nenhuma sai misturada.
+
+\subsection{Ferramentas prontas do Java}
+
+Na prática, raramente se escreve \cmd{wait} e \cmd{notify} à mão. O pacote \cmd{java.util.concurrent} já oferece as estruturas desta aula, testadas e eficientes:
+
+\begin{center}
+\begin{tabular}{@{}lR{0.6\linewidth}@{}}
+\toprule
+\textbf{Classe} & \textbf{Corresponde a} \\
+\midrule
+\cmd{Semaphore} & Os semáforos do C (\cmd{acquire} = \cmd{sem\_wait}, \cmd{release} = \cmd{sem\_post}). É o que a simulação Produção de dinheiro usa. \\
+\cmd{ReentrantLock} e \cmd{Condition} & Um monitor explícito, com quantas variáveis de condição se quiser (por exemplo, uma para ``não cheio'' e outra para ``não vazio''). \\
+\cmd{ArrayBlockingQueue} & O buffer limitado inteiro: \cmd{put} espera vaga e \cmd{take} espera item. É o produtor-consumidor pronto. \\
+\cmd{AtomicInteger} & O contador atômico: \cmd{incrementAndGet} é o \cmd{atomic\_fetch\_add} do Java. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Semáforos ou monitores?}
+
+\begin{center}
+\begin{tabular}{@{}R{0.2\linewidth}R{0.36\linewidth}R{0.36\linewidth}@{}}
+\toprule
+& \textbf{Semáforo} & \textbf{Monitor} \\
+\midrule
+Exclusão mútua & Feita à mão, com um semáforo em 1 & Automática \\
+Esperar condição & Contadores (\cmd{empty}, \cmd{full}) & \cmd{wait} dentro de \cmd{while} \\
+Guarda avisos? & Sim: o valor acumula os \cmd{post} & Não: \cmd{notify} sem ninguém esperando se perde \\
+Onde fica a disciplina & Espalhada pelo código que usa & Concentrada no objeto \\
+Erros típicos & Esquecer um \cmd{post}, trocar a ordem & Usar \cmd{if}, esquecer \cmd{notifyAll} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Os dois têm o mesmo poder: dá para implementar um com o outro. A escolha é de organização: o monitor deixa os erros mais difíceis de cometer, porque a chave é pega e devolvida pela linguagem.
+
+% ============================================================
+\section{Demonstração visual: Produção de dinheiro}
+% ============================================================
+
+\subsection{A simulação}
+
+A simulação ``Produção de dinheiro'' mostra o produtor-consumidor acontecendo na tela. O \textbf{banco} é o produtor (cria notas) e o \textbf{carro-forte} é o consumidor (retira notas). Por baixo, ela usa threads Java e três semáforos, como o \cmd{prod\_cons.c}.
+
+\begin{lstlisting}[style=terminal]
+$ make run-simulation
+\end{lstlisting}
+
+A janela precisa de JDK 21 ou mais novo e de Maven; na primeira execução, o Maven baixa o JavaFX pela internet.
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Na tela} & \textbf{No \cmd{prod\_cons.c}} \\
+\midrule
+10 posições & \cmd{N} \\
+W (próxima escrita) & \cmd{hi} \\
+R (próxima leitura) & \cmd{lo} \\
+itens disponíveis & \cmd{full} \\
+vagas livres & \cmd{empty} \\
+``Produtor: Aguardando vaga'' & dormindo em \cmd{sem\_wait(\&empty)} \\
+``Consumidor: Aguardando item'' & dormindo em \cmd{sem\_wait(\&full)} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Quatro experimentos}
+
+Para cada um, faça a previsão antes de olhar.
+
+\subsubsection{Experimento 1: ritmos iguais}
+Produtor e consumidor em 2 itens/s. O buffer fica oscilando com poucas notas, e W e R andam quase juntos. Há quase sempre vaga e quase sempre item: ninguém espera muito.
+
+\subsubsection{Experimento 2: produtor rápido}
+Produtor em 10, consumidor em 0,2. O buffer enche e aparece ``Produtor: Aguardando vaga: buffer cheio''. No C, o produtor está dormindo em \cmd{wait\_sem(\&empty)} com \cmd{empty = 0}. Ele \textbf{não} segura o \cmd{mutex}, e por isso o consumidor continua conseguindo retirar.
+
+\subsubsection{Experimento 3: consumidor rápido}
+Produtor em 0,2, consumidor em 10. O buffer esvazia e aparece ``Consumidor: Aguardando item: buffer vazio''. O consumidor dorme em \cmd{wait\_sem(\&full)} com \cmd{full = 0}; cada nota nova faz \cmd{sem\_post(\&full)} e o acorda.
+
+\subsubsection{Experimento 4: a volta do buffer e a pausa}
+Com ritmos intermediários, W chega à posição 9 e volta para a 0: é o \cmd{(hi + 1) \% N}. Pausando, itens disponíveis mais vagas livres dá sempre 10: é o \cmd{empty + full = N}.
+
+\begin{exemplo}[O que a simulação mostra]
+O \cmd{mutex} garante que ninguém atrapalha. \cmd{empty} e \cmd{full} garantem que ninguém trabalha sem ter o que precisa.
+\end{exemplo}
+
+% ============================================================
+\section{Atividade prática}
+% ============================================================
+
+\subsection{O que fazer}
+
+Abra \cmd{examples/dia07/prod\_cons\_atividade.c}. É o \cmd{prod\_cons.c} com seis lacunas:
+
+\begin{lstlisting}[style=codigo]
+sem_init(&mutex, 0, 1);
+sem_init(&empty, 0, @/* 1: vagas no inicio */@);
+sem_init(&full,  0, @/* 2: itens no inicio */@);
+
+/* produtor */                   /* consumidor */
+wait_sem(@/* 3 */@);                 wait_sem(@/* 5 */@);
+wait_sem(&mutex);                wait_sem(&mutex);
+insert_item(item);               item = remove_item();
+sem_post(&mutex);                sem_post(&mutex);
+sem_post(@/* 4 */@);                 sem_post(@/* 6 */@);
+\end{lstlisting}
+
+O \cmd{mutex} já está pronto e a ordem das linhas não deve mudar. As perguntas que guiam:
+
+\begin{itemize}
+    \item Quantas vagas e quantos itens existem quando o programa começa?
+    \item Antes de mexer no buffer, o que cada thread precisa ter?
+    \item Depois de mexer, quem precisa ficar sabendo, e de quê?
+\end{itemize}
+
+\subsection{Compilar e testar}
+
+\begin{lstlisting}[style=terminal]
+$ gcc -std=c11 -Wall -Wextra -Wpedantic -Werror \
+      examples/dia07/prod_cons_atividade.c -o prod-cons-aluno -pthread
+$ ./prod-cons-aluno
+...
+Fim: 40 itens produzidos e consumidos; buffer vazio.
+\end{lstlisting}
+
+Antes de preencher, o esqueleto não compila. Isso é proposital.
+
+\subsection{Se der errado}
+
+\begin{center}
+\begin{tabular}{@{}R{0.42\linewidth}R{0.5\linewidth}@{}}
+\toprule
+\textbf{Sintoma} & \textbf{O que significa} \\
+\midrule
+O programa para de imprimir e não termina (saia com \cmd{Ctrl + C}) & Alguma thread dorme esperando um semáforo que ninguém vai liberar. \\
+\cmd{Assertion `count < N' failed} & O produtor inseriu sem haver vaga: \cmd{empty} não está diminuindo de verdade. \\
+\cmd{Assertion `count > 0' failed} & O consumidor retirou sem haver item: \cmd{full} está maior do que deveria. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Perguntas para responder em dupla}
+
+\begin{enumerate}
+    \item Por que o produtor espera \cmd{empty} \textbf{antes} de pegar o \cmd{mutex}? O que poderia acontecer se pegasse o \cmd{mutex} primeiro?
+    \item Se o seu programa travou ou abortou em alguma tentativa, qual lacuna estava errada e por que isso causou aquele sintoma?
+\end{enumerate}
+
+% ============================================================
+\section{Resumo}
+% ============================================================
+
+\begin{center}
+\begin{tabular}{@{}lR{0.66\linewidth}@{}}
+\toprule
+\textbf{Conceito} & \textbf{Em uma frase} \\
+\midrule
+Thread & Fluxo de execução que divide a memória com as outras threads do processo. \\
+Condição de corrida & O resultado depende da ordem em que as threads foram intercaladas. \\
+Região crítica & Trecho que acessa o recurso compartilhado. \\
+Exclusão mútua & No máximo uma thread por vez na região crítica. \\
+Peterson & Exclusão mútua para duas threads, com espera ocupada. \\
+Semáforo & Contador com \cmd{wait} e \cmd{post}; quem não pode seguir dorme. \\
+Produtor-consumidor & \cmd{mutex} para exclusão mútua; \cmd{empty} e \cmd{full} para disponibilidade. \\
+Instrução atômica & Lê e escreve a memória numa operação indivisível, mesmo com vários núcleos. \\
+Spinlock & Trava em que quem espera fica girando; boa para esperas curtíssimas. \\
+Deadlock & Cada thread espera algo que só a outra pode dar; exige as quatro condições de Coffman. \\
+Inanição & Uma thread espera indefinidamente enquanto as outras passam na frente. \\
+Variável de condição & Fila de espera dentro de um monitor; não guarda avisos. \\
+Monitor & Dados, operações e exclusão mútua no mesmo objeto; \cmd{wait} e \cmd{notify} para esperar condições. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{definicao}[As duas aulas em uma frase]
+Processos isolam a memória e precisam de pipe para conversar. Threads compartilham a memória e precisam de sincronização para não se atrapalhar.
+\end{definicao}
+
+% ============================================================
+\section{Exercícios de fixação}
+% ============================================================
+
+\begin{enumerate}
+    \item Por que o resultado de \cmd{corrida.c} muda a cada execução?
+    \item Escreva uma intercalação dos três passos de \cmd{contador++} em duas threads que dê o resultado \textbf{correto} (2) e outra que dê o resultado errado (1).
+    \item No produtor-consumidor com \cmd{N = 5}, depois de três produções e um consumo completos, quanto valem \cmd{empty}, \cmd{full} e \cmd{count}?
+    \item Por que Peterson não obriga as threads a se alternarem (uma vez cada)?
+    \item E se o semáforo \cmd{mutex} fosse iniciado com 0 em vez de 1?
+    \item No produtor, trocar a ordem dos dois \cmd{sem\_post} (avisar \cmd{full} antes de devolver o \cmd{mutex}) causa deadlock?
+    \item Por que \cmd{wait()} só pode ser chamado dentro de um método \cmd{synchronized}?
+    \item Na mailbox completa com dois produtores e um consumidor, por que usar \cmd{notifyAll()} e não \cmd{notify()}?
+    \item Se o consumidor da mailbox 3s usasse \cmd{Thread.sleep(100)} em vez de \cmd{wait()} dentro do \cmd{while}, o que aconteceria?
+    \item Das 20 intercalações possíveis de dois \cmd{contador++}, quais dão o resultado certo? Por quê?
+    \item Com \cmd{-O2}, o \cmd{contador = contador + 1} vira uma única instrução \cmd{addl}. Por que a corrida continua?
+    \item Qual das quatro condições de uma boa solução a alternância estrita viola? Dê um exemplo.
+    \item No deadlock do consumidor que pega o \cmd{mutex} antes de esperar \cmd{full}, identifique as quatro condições de Coffman.
+    \item Num monitor com semântica de Hoare, o \cmd{while} antes de \cmd{wait} seria necessário? E em Java?
+    \item Por que um semáforo não sofre o problema do despertar perdido, mas o par \cmd{dormir()}/\cmd{acordar()} ingênuo sofre?
+\end{enumerate}
+
+\subsection*{Respostas}
+
+\begin{enumerate}
+    \item Porque a ordem em que as threads são intercaladas depende do escalonador, da carga da máquina e de quantos núcleos estão livres, e isso muda a cada execução. Quantos incrementos se perdem depende de quantas vezes as leituras das duas threads caíram ``no meio'' uma da outra.
+    \item Correta: A lê 0, A calcula 1, A escreve 1, B lê 1, B calcula 2, B escreve 2. Errada: a da Seção~\ref{sec:intercalacao}, em que as duas leem 0 antes de alguma escrever.
+    \item \cmd{empty = 3}, \cmd{full = 2}, \cmd{count = 2}. Três produções levam \cmd{empty} de 5 a 2 e \cmd{full} de 0 a 3; o consumo devolve uma vaga e retira um item.
+    \item Porque a espera só acontece se o \textbf{outro} também estiver interessado. Se a outra thread não quer entrar, \cmd{interessado[outro]} é falso e a thread entra quantas vezes quiser seguidas.
+    \item Ninguém conseguiria pegar a chave: o primeiro \cmd{sem\_wait(\&mutex)} de qualquer thread dormiria para sempre, e o programa travaria logo no começo.
+    \item Não. O consumidor pode acordar um pouco antes e ter de esperar o \cmd{mutex} até o produtor devolvê-lo, mas o produtor devolve logo em seguida, sem esperar nada. Funciona; só muda um pouco o desempenho. O deadlock vem de \textbf{dormir} segurando a chave, não da ordem dos \cmd{post}.
+    \item Porque \cmd{wait()} precisa \textbf{soltar} a chave, e só quem tem a chave pode soltá-la. Além disso, testar a condição e começar a esperar precisa acontecer sem que outra thread mude a condição no meio. Fora de \cmd{synchronized}, o Java lança \cmd{IllegalMonitorStateException}.
+    \item Com \cmd{notify()}, o produtor que acabou de guardar pode acordar o \textbf{outro produtor}, que vê a caixa cheia e volta a dormir. O consumidor continua dormindo, e todos podem acabar esperando para sempre. Com \cmd{notifyAll()}, todos acordam e cada um confere a sua condição: o consumidor certamente acorda.
+    \item O consumidor dormiria \textbf{segurando a chave}, porque \cmd{sleep} não a solta. Nenhum produtor conseguiria entrar em \cmd{storeMessage} para colocar uma mensagem, e o consumidor ficaria acordando e dormindo para sempre com a caixa vazia.
+    \item Só AAABBB e BBBAAA, em que uma thread faz os três passos antes de a outra começar. Em qualquer outra, as duas leem o valor antes de alguma escrever, e uma escrita apaga a outra.
+    \item Porque uma instrução não é atômica entre núcleos: por dentro, o processador lê, soma e escreve, e outro núcleo pode ler no meio. Só o prefixo \cmd{lock} (gerado por \cmd{atomic\_fetch\_add}) torna a operação indivisível.
+    \item A condição 3: uma thread fora da região crítica não pode impedir outra de entrar. Se a thread 0 quer entrar duas vezes seguidas, precisa esperar a thread 1 entrar e sair, mesmo que a thread 1 nem queira entrar.
+    \item Exclusão mútua: só um tem o \cmd{mutex}. Posse e espera: o consumidor tem o \cmd{mutex} e espera \cmd{full}. Não preempção: ninguém tira o \cmd{mutex} dele. Espera circular: o consumidor espera um item do produtor, e o produtor espera o \cmd{mutex} do consumidor.
+    \item Com Hoare, a thread acordada entra imediatamente, com a condição garantida, e um \cmd{if} bastaria (desde que não houvesse despertares espúrios). Java usa a semântica de Mesa e permite despertares espúrios: o \cmd{while} é obrigatório.
+    \item Porque o semáforo guarda os avisos no seu valor: um \cmd{sem\_post} feito antes do \cmd{sem\_wait} não se perde, apenas soma 1, e o \cmd{sem\_wait} seguinte passa direto. Além disso, o teste do valor e o bloqueio acontecem numa operação indivisível. No par ingênuo, o teste e o \cmd{dormir()} são separados, e o \cmd{acordar()} feito no meio não deixa registro.
+\end{enumerate}
+
+% ============================================================
+\section*{Para saber mais}
+\addcontentsline{toc}{section}{Para saber mais}
+% ============================================================
+
+\begin{itemize}
+    \item Páginas de manual: \cmd{man 7 pthreads}, \cmd{man 3 pthread\_create}, \cmd{man 3 sem\_wait}, \cmd{man 3 sem\_init}. Também em \url{https://man7.org/linux/man-pages/}.
+    \item Contrato de \cmd{wait}, \cmd{notify} e despertares espúrios: documentação de \cmd{java.lang.Object}, em \url{https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html}.
+    \item TANENBAUM, A. S.; BOS, H. \emph{Sistemas Operacionais Modernos}. 4. ed. São Paulo: Pearson, 2016. Seção 2.3: comunicação entre processos (condições de corrida, regiões críticas, Peterson, semáforos, monitores).
+    \item SILBERSCHATZ, A.; GALVIN, P. B.; GAGNE, G. \emph{Fundamentos de Sistemas Operacionais}. 9. ed. Rio de Janeiro: LTC, 2015. Capítulo 5: sincronização de processos.
+\end{itemize}
+
+Em outras edições, o assunto continua nos capítulos sobre sincronização, mas a numeração pode mudar.
+
+\begin{itemize}
+    \item DOWNEY, A. B. \emph{The Little Book of Semaphores}. Green Tea Press, livre, em \url{https://greenteapress.com/wp/semaphores/}. Dezenas de problemas de sincronização resolvidos com semáforos, em inglês.
+    \item HERLIHY, M.; SHAVIT, N. \emph{The Art of Multiprocessor Programming}. Morgan Kaufmann. Capítulo 2: exclusão mútua, com a prova completa de Peterson.
+    \item GOETZ, B. et al. \emph{Java Concurrency in Practice}. Addison-Wesley, 2006. Monitores, o pacote \cmd{java.util.\allowbreak concurrent} e os erros mais comuns em Java.
+\end{itemize}
+
+\end{document}

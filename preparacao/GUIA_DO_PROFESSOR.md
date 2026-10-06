@@ -1,4 +1,4 @@
-# Preparação das aulas de SO — 5 e 7 de outubro de 2026
+# Preparação das aulas de SO: 5 e 7 de outubro de 2026
 
 ## Atualização: exemplos C corrigidos
 
@@ -23,7 +23,7 @@ Fala de transição: “Na primeira aula, precisamos construir um caminho para o
 
 ## 2. Entendendo os arquivos
 
-### fork2.c — criação de processos e memória
+### fork2.c: criação de processos e memória
 
 `malloc` aloca um vetor de três inteiros. `mypid` guarda o PID original. O laço chama `fork` três vezes em cada caminho de execução. O filho recebe retorno zero e escreve em `v[i]`; o pai recebe o PID do filho. Ambos continuam o laço. Se nenhuma criação falhar, são criados sete filhos, totalizando oito processos ao longo da execução. Não é garantido que os oito permaneçam vivos simultaneamente.
 
@@ -44,7 +44,7 @@ Para uma demonstração controlada, faça uma cópia e substitua a alocação po
 
 O heap não vira compartilhado porque foi alocado antes do fork. Pai e filho têm espaços virtuais independentes; o sistema pode usar copy-on-write internamente. Endereços virtuais iguais não provam compartilhamento. `sleep` e `waitpid` não fazem as escritas do filho aparecerem na memória comum do pai.
 
-### pipe2.c — o arquivo aberto no editor
+### pipe2.c: o arquivo aberto no editor
 
 Objetivo: transportar componentes de Bhaskara para um calculador e devolver duas raízes ao processo original. A entrada contém `a`, `b` e **delta já calculado**, não `c`. A fórmula é `(-b ± sqrt(delta)) / (2*a)`.
 
@@ -83,7 +83,7 @@ Quando `son1` chega a uma leitura sem dados, pode bloquear. O escalonador pode e
 
 Caso para desenhar no quadro: `a=1`, `b=-3`, `delta=1` (equação `x²-3x+2=0`). Os fornecedores enviam `2`, `3` e `1`. O calculador devolve `1` e `2`. Faça a conta antes de mostrar o código.
 
-### peterson-code.c — intenção de entrar e desempate
+### peterson-code.c: intenção de entrar e desempate
 
 Peterson é um algoritmo de exclusão mútua para dois participantes, com hipóteses sobre atomicidade e ordenação de memória. `interested[i]` indica intenção de entrar. `turn` resolve a disputa. Nesta variante, quem entra escreve seu próprio número e espera se o outro estiver interessado e o turno ainda for o seu. Para apresentar sem ambiguidade, use a forma convencional abaixo:
 
@@ -104,7 +104,7 @@ Além do include ausente de `unistd.h` e do estouro de `cr[8]` ao copiar `"threa
 
 Espera ocupada repete testes e consome CPU. `sleep(1)` fora da região crítica não transforma o algoritmo em espera bloqueante e não garante correção.
 
-### prod_cons.c — disponibilidade e exclusão mútua
+### prod_cons.c: disponibilidade e exclusão mútua
 
 Uma thread produz números; outra os consome. Ambas acessam o mesmo buffer circular de capacidade `N=20`.
 
@@ -135,9 +135,9 @@ Por que a ordem importa? Se um consumidor adquirir mutex e depois esperar por fu
 - `pthread_join` faz a thread chamadora esperar que a outra termine. Não impede a thread alvo de terminar antes do join. O segundo argumento de `pthread_create` recebe atributos, não um indicador que adia término.
 - Remova os casts `(void *) producer` e `(void *) consumer`: as funções já têm a assinatura apropriada para `pthread_create`.
 - Declare explicitamente `time` incluindo `time.h`; trate retornos das APIs. `remove_item` não retorna valor se a condição falhar, embora o protocolo correto deva garantir item disponível.
-- Os laços são infinitos; o join normalmente não retorna. Ctrl+C encerra a demonstração. A quantidade e a ordem das mensagens variam; log não é prova de ausência de corrida.
+- No original, os laços eram infinitos e o join não retornava. A versão revisada produz e consome 40 itens e termina sozinha. A ordem das mensagens varia entre execuções; log não é prova de ausência de corrida.
 
-### Monitores Java — pastas Monitor/1 e Monitor/3
+### Monitores Java: pastas Monitor/1 e Monitor/3
 
 O caminho real é `Monitor-20261002T192224Z-1-001/Monitor`.
 
@@ -166,20 +166,20 @@ retirar, sob o mesmo monitor:
 
 `notifyAll` permite que produtores e consumidores acordados reavaliem suas próprias condições. Uma implementação também precisa tratar interrupção e tamanho máximo da mensagem. O original ignora interrupções.
 
-## 3. Aula de 5/10 — processos e comunicação
+## 3. Aula de 5/10: processos e comunicação
 
 Objetivos observáveis: desenhar a árvore de forks, explicar por que o pai não recebe escritas no heap do filho e completar uma troca de dados com pipe.
 
 | Minutos | Condução e fala sugerida | Evidência de compreensão |
 |---|---|---|
-| 0–10 | “Um programa no disco já é um processo?” Defina processo, PID e espaço de memória. | Aluno distingue instruções de instância em execução. |
-| 10–25 | Mostre o laço de fork2, escondendo a execução. “O filho também volta para o laço?” Desenhe 1→2→4→8. | Aluno prevê oito caminhos e explica os retornos de fork. |
-| 25–40 | Aponte o vetor não inicializado. Mostre uma cópia inicializada com calloc. “Esperar o filho mudaria a soma do pai?” | Aluno responde não e justifica memória independente. |
-| 40–50 | Duplas respondem as perguntas 1–4 abaixo; faça correção oral. | Justificativas, não apenas números. |
-| 50–62 | Desenhe pai, filho e pipe. “O dado atravessa a variável ou atravessa o pipe?” Apresente leitura, escrita e fechamento. | Aluno identifica ponta leitora e escritora. |
-| 62–75 | Use o mapa de pipe2 e os valores 1, -3, 1. Leia só os trechos de envio, cálculo e recepção. | Aluno segue -b, 2a e delta até as raízes. |
-| 75–87 | Prática pai-filho: filho envia 30, pai imprime. Use o esqueleto do PDF. | Compila ou entrega pseudocódigo correto com close/read/write. |
-| 87–90 | Bilhete de saída: “Por que malloc antes de fork não basta para compartilhar resultado?” | Resposta menciona espaços independentes e IPC. |
+| 0 a 10 | “Um programa no disco já é um processo?” Defina processo, PID e espaço de memória. | Aluno distingue instruções de instância em execução. |
+| 10 a 25 | Mostre o laço de fork2, escondendo a execução. “O filho também volta para o laço?” Desenhe 1→2→4→8. | Aluno prevê oito caminhos e explica os retornos de fork. |
+| 25 a 40 | Aponte o vetor não inicializado. Mostre uma cópia inicializada com calloc. “Esperar o filho mudaria a soma do pai?” | Aluno responde não e justifica memória independente. |
+| 40 a 50 | Duplas respondem as perguntas 1 a 4 abaixo; faça correção oral. | Justificativas, não apenas números. |
+| 50 a 62 | Desenhe pai, filho e pipe. “O dado atravessa a variável ou atravessa o pipe?” Apresente leitura, escrita e fechamento. | Aluno identifica ponta leitora e escritora. |
+| 62 a 75 | Use o mapa de pipe2 e os valores 1, -3, 1. Leia só os trechos de envio, cálculo e recepção. | Aluno segue -b, 2a e delta até as raízes. |
+| 75 a 87 | Prática pai-filho: filho envia 30, pai imprime. Use o esqueleto do PDF. | Compila ou entrega pseudocódigo correto com close/read/write. |
+| 87 a 90 | Bilhete de saída: “Por que malloc antes de fork não basta para compartilhar resultado?” | Resposta menciona espaços independentes e IPC. |
 
 Se a demonstração original de pipe2 falhar, mantenha a análise do fluxo e use o programa pequeno pai-filho. A aula deve demonstrar IPC; não precisa executar todos os fornecedores interativos.
 
@@ -194,20 +194,22 @@ Se a demonstração original de pipe2 falhar, mantenha a análise do fluxo e use
 7. Pipe vazio implica EOF? Não. Uma leitura bloqueante espera se ainda há escritor aberto; EOF ocorre com pipe vazio e todas as pontas de escrita fechadas.
 8. Gabarito da prática: filho fecha leitura, calcula 30, escreve os bytes do inteiro, fecha escrita; pai fecha escrita, lê os bytes, imprime e fecha leitura. Na versão preparada, verificar resultados e aguardar o filho com waitpid. Para dados gerais, tratar leituras/escritas parciais.
 
-## 4. Aula de 7/10 — concorrência e sincronização
+## 4. Aula de 7/10: concorrência e sincronização
+
+Material pronto para aplicação: [roteiro](../docs/aulas/dia07/ROTEIRO.md) (teoria, simulação e prática), [atividade](../docs/aulas/dia07/ATIVIDADE.md), [gabarito](../docs/aulas/dia07/GABARITO.md) e [cola de demonstração](../docs/aulas/dia07/COLA_DEMONSTRACAO.md). A seção abaixo continua valendo como referência conceitual.
 
 Objetivos observáveis: construir uma intercalação problemática, justificar a ordem dos semáforos e explicar a diferença entre lock e espera por condição.
 
 | Minutos | Condução e fala sugerida | Evidência de compreensão |
 |---|---|---|
-| 0–12 | Retome memória dos processos e contraste com threads do mesmo processo. Simule incremento no quadro. | Aluno identifica resultado perdido. |
-| 12–23 | Região crítica, exclusão mútua e Peterson em pseudocódigo. “O que essa espera faz com a CPU?” | Aluno distingue exclusão de alternância e espera ocupada. |
-| 23–38 | Distribua cartões de vagas, itens e chave. Inicialize N=3, empty=3, full=0, mutex=1. | Aluno distingue disponibilidade de proteção. |
-| 38–53 | Leia produtor e consumidor. Simule duas inserções e uma retirada. Inverta a ordem no quadro para construir deadlock. | Aluno explica por que esperar full dentro do mutex trava. |
-| 53–63 | Apresente monitor como estado e operações protegidas. Analogia: chave para entrar e condição para prosseguir. | Aluno não confunde possuir lock com haver mensagem. |
-| 63–75 | Compare Mailbox3b e 3s. Execute se houver JDK; senão simule duas escritas intercaladas. | Aluno aponta array/flag e métodos críticos. |
-| 75–83 | Explique wait, notify e while. Mostre que 3s pode sobrescrever mensagens. | Aluno separa integridade da mensagem de garantia de entrega. |
-| 83–90 | Duplas respondem questões abaixo; recolha um bilhete de saída. | Aluno justifica uma escolha de sincronização. |
+| 0 a 12 | Retome memória dos processos e contraste com threads do mesmo processo. Simule incremento no quadro. | Aluno identifica resultado perdido. |
+| 12 a 23 | Região crítica, exclusão mútua e Peterson em pseudocódigo. “O que essa espera faz com a CPU?” | Aluno distingue exclusão de alternância e espera ocupada. |
+| 23 a 38 | Distribua cartões de vagas, itens e chave. Inicialize N=3, empty=3, full=0, mutex=1. | Aluno distingue disponibilidade de proteção. |
+| 38 a 53 | Leia produtor e consumidor. Simule duas inserções e uma retirada. Inverta a ordem no quadro para construir deadlock. | Aluno explica por que esperar full dentro do mutex trava. |
+| 53 a 63 | Apresente monitor como estado e operações protegidas. Analogia: chave para entrar e condição para prosseguir. | Aluno não confunde possuir lock com haver mensagem. |
+| 63 a 75 | Compare Mailbox3b e 3s. Execute se houver JDK; senão simule duas escritas intercaladas. | Aluno aponta array/flag e métodos críticos. |
+| 75 a 83 | Explique wait, notify e while. Mostre que 3s pode sobrescrever mensagens. | Aluno separa integridade da mensagem de garantia de entrega. |
+| 83 a 90 | Duplas respondem questões abaixo; recolha um bilhete de saída. | Aluno justifica uma escolha de sincronização. |
 
 ### Intercalação para o quadro
 
@@ -291,6 +293,6 @@ Antes de cada encontro: ensaie no computador do laboratório; deixe o mapa de pr
 
 ## Demonstração visual adicional para 7/10
 
-Use [Produção de dinheiro](../pc_trabalho04_202011393/README.md) por cinco minutos antes da leitura do produtor-consumidor C, dentro do bloco de 38–53 min. Faça o buffer encher com produtor rápido e consumidor lento; depois inverta as velocidades. Peça à turma para identificar quem espera e em qual semáforo do C esperaria. Pause para discutir os dez slots e índices circulares. A nova versão usa threads Java e semáforos, não processos nem o monitor das mailboxes.
+Use [Produção de dinheiro](../pc_trabalho04_202011393/README.md) por cinco minutos antes da leitura do produtor-consumidor C, dentro do bloco de 38 a 53 min. Faça o buffer encher com produtor rápido e consumidor lento; depois inverta as velocidades. Peça à turma para identificar quem espera e em qual semáforo do C esperaria. Pause para discutir os dez slots e índices circulares. A nova versão usa threads Java e semáforos, não processos nem o monitor das mailboxes.
 
 Atualização da verificação Java: o compilador deste ambiente pode ser chamado por `java -m jdk.compiler/com.sun.tools.javac.Main`, embora não haja executável javac no PATH. O modelo da simulação foi compilado e testado; a interface foi compilada com bibliotecas JavaFX. A janela passou por um teste de inicialização de oito segundos; a inspeção visual e a operação dos controles permanecem etapas de ensaio no laboratório.

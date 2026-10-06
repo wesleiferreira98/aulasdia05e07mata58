@@ -12,6 +12,11 @@ __pycache__/
 /memoria
 /pipe-soma
 /pipe-soma-aluno
+/corrida
+/prod-cons-aluno
+/prod-cons-resposta
+/corrida-atomic
+/corrida-mutex
 /Monitor-20261002T192224Z-1-001.zip
 .DS_Store
 *~

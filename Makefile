@@ -4,7 +4,8 @@ BUILD = build
 MONITOR = Monitor-20261002T192224Z-1-001/Monitor
 PROGRAMS = $(BUILD)/fork2 $(BUILD)/pipe2 $(BUILD)/peterson $(BUILD)/prod_cons \
            $(BUILD)/pipe-soma $(BUILD)/fork-basico $(BUILD)/memoria-independente \
-           $(BUILD)/pipe-soma-resposta
+           $(BUILD)/pipe-soma-resposta $(BUILD)/corrida $(BUILD)/prod-cons-resposta \
+           $(BUILD)/corrida-atomic $(BUILD)/corrida-mutex
 
 .PHONY: all test java run-fork run-pipe run-peterson run-prod-cons run-java-3b run-java-3s
 all: $(PROGRAMS)
@@ -81,3 +82,25 @@ $(BUILD)/pipe-soma-resposta: examples/dia05/pipe_soma_atividade_resposta.c | $(B
 	$(CC) $(CFLAGS) $< -o $@
 run-resposta: $(BUILD)/pipe-soma-resposta
 	./$(BUILD)/pipe-soma-resposta
+
+# Aula de 7/10
+.PHONY: run-corrida run-resposta-dia07
+$(BUILD)/corrida: examples/dia07/corrida.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@ -pthread
+$(BUILD)/prod-cons-resposta: examples/dia07/prod_cons_resposta.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@ -pthread
+run-corrida: $(BUILD)/corrida
+	./$(BUILD)/corrida
+run-resposta-dia07: $(BUILD)/prod-cons-resposta
+	./$(BUILD)/prod-cons-resposta
+.PHONY: run-caixa
+$(BUILD)/caixa/.compiled: $(wildcard examples/dia07/caixa/*.java)
+	mkdir -p $(BUILD)/caixa
+	javac -d $(BUILD)/caixa $^
+	touch $@
+run-caixa: $(BUILD)/caixa/.compiled
+	java -cp $(BUILD)/caixa TesteCaixa
+$(BUILD)/corrida-atomic: examples/dia07/corrida_atomic.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@ -pthread
+$(BUILD)/corrida-mutex: examples/dia07/corrida_mutex.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@ -pthread

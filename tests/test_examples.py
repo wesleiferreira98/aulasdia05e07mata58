@@ -49,6 +49,30 @@ class ExamplesTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "Resultado recebido: 30\n")
 
+    def test_corrida_runs_and_never_exceeds_expected(self):
+        result = run("corrida")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        found = re.search(r"Contador: (\d+) \(esperado: 2000000\)", result.stdout)
+        self.assertTrue(found, result.stdout)
+        self.assertLessEqual(int(found.group(1)), 2000000)
+
+    def test_corrida_fixes_never_lose_increments(self):
+        for name in ["corrida-atomic", "corrida-mutex"]:
+            for attempt in range(3):
+                with self.subTest(name=name, attempt=attempt):
+                    result = run(name)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn("Contador: 2000000 (esperado: 2000000)", result.stdout)
+
+    def test_prod_cons_activity_answer(self):
+        result = run("prod-cons-resposta")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        produced = re.findall(r"Produzido: (\d+)", result.stdout)
+        consumed = re.findall(r"Consumido: (\d+)", result.stdout)
+        self.assertEqual(len(produced), 40)
+        self.assertEqual(produced, consumed)
+        self.assertIn("40 itens produzidos e consumidos; buffer vazio.", result.stdout)
+
     def test_pipe_roots(self):
         for data, roots in [
             ("1 -3 1\n", "x1 = 1; x2 = 2"),

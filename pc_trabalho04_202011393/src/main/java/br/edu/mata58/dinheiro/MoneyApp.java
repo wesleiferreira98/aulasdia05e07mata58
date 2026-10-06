@@ -25,7 +25,7 @@ public final class MoneyApp extends Application {
     @Override public void start(Stage stage) {
         Label title = new Label("Produção de dinheiro");
         title.getStyleClass().add("title");
-        Label subtitle = new Label("Produtor–consumidor • dez posições • exclusão mútua e disponibilidade");
+        Label subtitle = new Label("Produtor e consumidor • dez posições • exclusão mútua e disponibilidade");
         subtitle.setWrapText(true);
         HBox header = new HBox(20, title, stateLabel);
         header.setAlignment(Pos.CENTER_LEFT);
@@ -41,7 +41,7 @@ public final class MoneyApp extends Application {
             GridPane.setHgrow(slots[i], Priority.ALWAYS);
         }
         occupancy.setMaxWidth(Double.MAX_VALUE);
-        VBox bufferCard = new VBox(14, new Label("BUFFER CIRCULAR — NOTAS EM ORDEM FIFO"),
+        VBox bufferCard = new VBox(14, new Label("BUFFER CIRCULAR: NOTAS EM ORDEM FIFO"),
                 summary, occupancy, grid, counters);
         bufferCard.getStyleClass().add("card");
         Label explanation = new Label("Vagas permitem produzir. Itens permitem consumir. "
@@ -66,7 +66,7 @@ public final class MoneyApp extends Application {
         scroll.setFitToWidth(true);
         Scene scene = new Scene(scroll, 1000, 900);
         scene.getStylesheets().add(getClass().getResource("/simulation.css").toExternalForm());
-        stage.setTitle("MATA58 — Produtor–consumidor | Weslei Ferreira Santos");
+        stage.setTitle("MATA58 · Produtor e consumidor | Weslei Ferreira Santos");
         stage.setScene(scene); stage.setMinWidth(950); stage.setMinHeight(650);
         timeline = new Timeline(new KeyFrame(Duration.millis(100), event -> refresh()));
         timeline.setCycleCount(Timeline.INDEFINITE);
