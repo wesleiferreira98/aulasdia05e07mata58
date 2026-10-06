@@ -7,7 +7,7 @@ Todos os comandos são executados **na raiz do repositório**.
 ```bash
 cd ~/Downloads/aulasdia05e07mata58
 rm -rf build
-make test               # tem que terminar com: Ran 11 tests ... OK
+make test               # tem que terminar com: Ran 12 tests ... OK
 make java               # compila as mailboxes 3b e 3s
 make run-simulation     # abre a janela; feche depois de conferir
 ```

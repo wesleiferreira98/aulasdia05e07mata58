@@ -19,7 +19,7 @@ Esta aula segue o roteiro do material-base do professor (PDF *Aulas guiadas*, Au
 Na raiz do repositório:
 
 ```bash
-make test               # 11 testes, inclusive corrida, Peterson e produtor-consumidor
+make test               # 12 testes, inclusive corrida, Peterson e produtor-consumidor
 make java               # compila as mailboxes 3b e 3s
 make run-simulation     # abre a janela da simulação; feche depois de conferir
 ```
