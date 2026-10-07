@@ -7,7 +7,11 @@ import java.util.List;
 public final class Simulation implements AutoCloseable {
     public enum State { READY, RUNNING, PAUSED, CLOSED }
     public record View(BoundedBuffer.Snapshot buffer, State state, String producerStatus,
-                       String consumerStatus, List<String> events) {}
+                       String consumerStatus, List<String> events, boolean protectedMode) {}
+
+    /** Pausa entre ler e escrever o contador no modo sem protecao (a janela da corrida). */
+    public static final long RACE_WINDOW_MILLIS = 250;
+
     private final Object gate = new Object();
     private BoundedBuffer buffer = new BoundedBuffer(10);
     private final ArrayDeque<String> events = new ArrayDeque<>();
@@ -16,6 +20,7 @@ public final class Simulation implements AutoCloseable {
     private double producerRate = 2, consumerRate = 2;
     private int nextItem = 1;
     private long generation;
+    private boolean protectedMode = true;   // false = mutex desligado (modo da aula)
     private final Thread producer = new Thread(() -> work(true), "produtor");
     private final Thread consumer = new Thread(() -> work(false), "consumidor");
 
@@ -32,7 +37,7 @@ public final class Simulation implements AutoCloseable {
             if (state != State.RUNNING) {
                 state = State.RUNNING;
                 generation++;
-                log("Simulacao em execucao");
+                log("Simulacao em execucao" + (protectedMode ? "" : " SEM PROTECAO (mutex desligado)"));
                 gate.notifyAll();
             }
         }
@@ -60,9 +65,23 @@ public final class Simulation implements AutoCloseable {
             nextItem = 1;
             producerStatus = consumerStatus = "Pronto";
             events.clear();
-            log("Buffer reiniciado");
+            log("Buffer reiniciado" + (protectedMode ? "" : " (modo SEM PROTECAO)"));
             gate.notifyAll();
         }
+    }
+
+    /**
+     * Liga ou desliga o mutex. So pode ser trocado com a simulacao parada,
+     * e a troca reinicia o buffer para comecar a comparacao do zero.
+     */
+    public void setProtected(boolean on) {
+        synchronized (gate) {
+            ensureOpen();
+            if (state == State.RUNNING)
+                throw new IllegalStateException("Pause a simulacao antes de trocar o modo");
+            protectedMode = on;
+        }
+        reset();
     }
 
     public void rates(double production, double consumption) {
@@ -80,36 +99,71 @@ public final class Simulation implements AutoCloseable {
     private void work(boolean producing) {
         try {
             while (true) {
+                BoundedBuffer target;
+                int item;
                 synchronized (gate) {
                     while (state != State.RUNNING) {
                         if (state == State.CLOSED) return;
                         gate.wait();
                     }
-                    boolean changed;
-                    if (producing) {
-                        changed = buffer.offer(nextItem, 0);
-                        producerStatus = changed ? "Produzindo" : "Aguardando vaga: buffer cheio";
-                        if (changed) log("Produziu nota #" + nextItem++);
-                    } else {
-                        Integer item = buffer.poll(0);
-                        changed = item != null;
-                        consumerStatus = changed ? "Consumindo" : "Aguardando item: buffer vazio";
-                        if (changed) log("Consumiu nota #" + item);
-                    }
-                    if (!changed) {
-                        gate.wait(); // Libera gate; outra thread pode alterar a disponibilidade.
+                    if (protectedMode) {
+                        // Modo protegido: igual ao original, tudo serializado pelo gate.
+                        boolean changed;
+                        if (producing) {
+                            changed = buffer.offer(nextItem, 0);
+                            producerStatus = changed ? "Produzindo" : "Aguardando vaga: buffer cheio";
+                            if (changed) log("Produziu nota #" + nextItem++);
+                        } else {
+                            Integer value = buffer.poll(0);
+                            changed = value != null;
+                            consumerStatus = changed ? "Consumindo" : "Aguardando item: buffer vazio";
+                            if (changed) log("Consumiu nota #" + value);
+                        }
+                        if (!changed) {
+                            gate.wait(); // Libera gate; outra thread pode alterar a disponibilidade.
+                            continue;
+                        }
+                        gate.notifyAll();
+                        waitInterval(producing);
                         continue;
                     }
-                    gate.notifyAll();
-                    // Notificacoes de disponibilidade nao encurtam o intervalo de velocidade.
-                    double rate = producing ? producerRate : consumerRate;
-                    long currentGeneration = generation;
-                    long deadline = System.nanoTime() + (long)(1_000_000_000 / rate);
-                    while (state == State.RUNNING && generation == currentGeneration) {
-                        long remaining = deadline - System.nanoTime();
-                        if (remaining <= 0) break;
-                        gate.wait(Math.max(1, remaining / 1_000_000));
+                    // Modo sem protecao: prepara a operacao e SAI do gate, para que
+                    // produtor e consumidor possam estar na regiao critica ao mesmo tempo.
+                    target = buffer;
+                    item = nextItem;
+                    if (producing) producerStatus = "Na região crítica, SEM mutex";
+                    else consumerStatus = "Na região crítica, SEM mutex";
+                }
+
+                BoundedBuffer.UnsafeResult result = producing
+                        ? target.offerUnprotected(item, 0, RACE_WINDOW_MILLIS)
+                        : target.pollUnprotected(0, RACE_WINDOW_MILLIS);
+
+                synchronized (gate) {
+                    if (target != buffer || state == State.CLOSED) continue;  // houve reset no meio
+                    if (!result.done()) {
+                        if (producing) producerStatus = "Aguardando vaga: buffer cheio";
+                        else consumerStatus = "Aguardando item: buffer vazio";
+                        // Espera com tempo limite: o aviso da outra thread pode ter vindo
+                        // antes de entrarmos aqui (despertar perdido), entao reconferimos.
+                        gate.wait(50);
+                        continue;
                     }
+                    if (producing) {
+                        producerStatus = "Produzindo";
+                        log("Produziu nota #" + nextItem++);
+                    } else {
+                        consumerStatus = "Consumindo";
+                        log("Consumiu nota #" + result.item());
+                    }
+                    if (result.overlap())
+                        log("CORRIDA: produtor e consumidor na regiao critica ao mesmo tempo");
+                    if (result.lostUpdate())
+                        log("CORRIDA: " + (producing ? "produtor" : "consumidor") + " leu size=" + result.seen()
+                            + ", a outra thread mudou para " + result.found()
+                            + " e ele escreveu " + result.written() + ": uma atualizacao se perdeu");
+                    gate.notifyAll();
+                    waitInterval(producing);
                 }
             }
         } catch (InterruptedException interrupted) {
@@ -117,10 +171,23 @@ public final class Simulation implements AutoCloseable {
         }
     }
 
+    /** Intervalo da velocidade escolhida; deve ser chamado com o gate adquirido. */
+    private void waitInterval(boolean producing) throws InterruptedException {
+        // Notificacoes de disponibilidade nao encurtam o intervalo de velocidade.
+        double rate = producing ? producerRate : consumerRate;
+        long currentGeneration = generation;
+        long deadline = System.nanoTime() + (long)(1_000_000_000 / rate);
+        while (state == State.RUNNING && generation == currentGeneration) {
+            long remaining = deadline - System.nanoTime();
+            if (remaining <= 0) break;
+            gate.wait(Math.max(1, remaining / 1_000_000));
+        }
+    }
+
     public View view() {
         synchronized (gate) {
             return new View(buffer.snapshot(), state, producerStatus, consumerStatus,
-                            List.copyOf(events));
+                            List.copyOf(events), protectedMode);
         }
     }
 

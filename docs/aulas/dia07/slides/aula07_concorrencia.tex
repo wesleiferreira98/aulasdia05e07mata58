@@ -297,7 +297,7 @@ Contador: 1349235 (esperado: 2000000)
 \small Quase metade dos incrementos se perde, e o resultado \textbf{muda a cada execução}.
 \end{frame}
 
-\begin{frame}{Dois avisos sobre \texttt{corrida.c}}
+\begin{frame}{Três avisos sobre \texttt{corrida.c}}
 \begin{itemize}
     \item Em C, duas threads acessando a mesma variável sem sincronização é uma \textbf{data race}: comportamento \textbf{indefinido}. O resultado não está garantido nem a ser ``1 ou 2''.
     \item \texttt{volatile} \textbf{não conserta}: ele só impede o compilador de juntar as somas. Está ali para a corrida aparecer.
@@ -404,7 +404,7 @@ Em vez de girar, a thread deveria \textbf{dormir} e ser \textbf{acordada} quando
 \section{Semáforos}
 % ============================================================
 
-\begin{frame}{Semáforo: um contador que nunca fica negativo}
+\begin{frame}{Semáforo: um contador que nunca fica negativo (POSIX)}
 \begin{columns}[T]
 \column{0.5\textwidth}
 \textbf{\texttt{sem\_wait(\&s)}} (também: \emph{down}, P)
@@ -421,12 +421,13 @@ Em vez de girar, a thread deveria \textbf{dormir} e ser \textbf{acordada} quando
 \end{itemize}
 \end{columns}
 
-\vspace{0.8em}
+\vspace{0.4em}
 \begin{exampleblock}{Analogia: estacionamento com placa de vagas}
 O valor do semáforo é o número de vagas na placa. Quem chega e vê 0 \textbf{espera parado}, sem rodar em volta do quarteirão. Quem sai, soma uma vaga e libera o próximo.
 \end{exampleblock}
 
-\small A espera e o despertar são feitos pelo SO de forma \textbf{atômica}: não há corrida no próprio contador.
+\footnotesize A espera e o despertar são feitos pelo SO de forma \textbf{atômica}: não há corrida no próprio contador.\\[0.3em]
+\textbf{Outra versão, nos livros} (Silberschatz): \texttt{wait} sempre diminui 1, e o valor pode ficar \textbf{negativo}: $-2$ significa duas threads esperando. É a mesma ideia; muda só a implementação.
 \end{frame}
 
 \begin{frame}{Os três semáforos do produtor-consumidor}
@@ -999,7 +1000,7 @@ Processos isolam a memória e precisam de pipe para conversar. Threads compartil
 \textbf{Espera ocupada}: esperar girando e gastando CPU.
 
 \column{0.5\textwidth}
-\textbf{Semáforo}: contador não negativo com \texttt{wait} e \texttt{post}.\\[0.35em]
+\textbf{Semáforo}: contador com \texttt{wait} e \texttt{post}; quem não pode seguir dorme.\\[0.35em]
 \textbf{Mutex}: semáforo (ou lock) que vale 0 ou 1; a ``chave''.\\[0.35em]
 \textbf{Deadlock}: cada um espera algo que só o outro pode dar.\\[0.35em]
 \textbf{Monitor}: objeto com dados, operações e exclusão mútua juntos.\\[0.35em]

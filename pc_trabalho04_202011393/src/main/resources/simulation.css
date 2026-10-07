@@ -8,3 +8,7 @@
 .button { -fx-padding: 10 24; -fx-font-weight: bold; -fx-background-radius: 8; }
 .progress-bar > .bar { -fx-background-color: #19865b; }
 .text-area { -fx-font-family: "Monospaced"; -fx-font-size: 14px; }
+.label.warning { -fx-background-color: #fff4e5; -fx-border-color: #e67e22; -fx-border-width: 2; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 12 16; -fx-text-fill: #7a3d00; -fx-font-weight: bold; }
+.label.alert { -fx-background-color: #fdecea; -fx-border-color: #c0392b; -fx-border-width: 3; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 14 18; -fx-text-fill: #8e1b10; -fx-font-weight: bold; -fx-font-size: 17px; }
+.card.race-live { -fx-border-color: #c0392b; -fx-border-width: 5; -fx-border-radius: 14; }
+.unsafe-check { -fx-font-weight: bold; -fx-text-fill: #8e1b10; }

@@ -4,15 +4,39 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
-/** Buffer FIFO: vagas/itens reservam disponibilidade; mutex protege o estado. */
+/**
+ * Buffer FIFO: vagas/itens reservam disponibilidade; mutex protege o estado.
+ *
+ * Alem das operacoes protegidas (offer/poll), ha versoes SEM PROTECAO
+ * (offerUnprotected/pollUnprotected) para a aula: elas continuam usando os
+ * semaforos de vagas e itens, mas NAO pegam o mutex. A atualizacao do
+ * contador compartilhado size vira "ler, esperar, escrever", como o
+ * contador++ em camera lenta, e a condicao de corrida fica visivel.
+ */
 public final class BoundedBuffer {
     public record Snapshot(List<Integer> slots, int size, int nextWrite, int nextRead,
-                           long produced, long consumed) {}
+                           long produced, long consumed,
+                           int notesInSlots, int insideNow, long overlaps, long lostUpdates) {}
+
+    /** O que aconteceu numa operacao sem protecao. */
+    public record UnsafeResult(boolean done, int item, boolean overlap, boolean lostUpdate,
+                               int seen, int found, int written) {
+        static UnsafeResult notDone() { return new UnsafeResult(false, 0, false, false, 0, 0, 0); }
+    }
+
     private final int[] items;
     private final Semaphore empty, full = new Semaphore(0), mutex = new Semaphore(1);
-    private int head, tail, size;
-    private long produced, consumed;
+    private int head, tail;
+    private volatile int size;          // contador compartilhado (volatile NAO evita a corrida)
+    private long produced, consumed;    // cada um e alterado por uma unica thread
+
+    // Instrumentacao para detectar a corrida (operacoes atomicas, sempre corretas):
+    private final AtomicInteger inside = new AtomicInteger();     // threads na regiao critica agora
+    private final AtomicLong overlaps = new AtomicLong();         // vezes em que duas estiveram juntas
+    private final AtomicLong lostUpdates = new AtomicLong();      // escritas de size que apagaram outra
 
     public BoundedBuffer(int capacity) {
         if (capacity < 1) throw new IllegalArgumentException("Capacidade deve ser positiva");
@@ -27,11 +51,14 @@ public final class BoundedBuffer {
         try {
             mutex.acquire();
             locked = true;
-            items[tail] = value;
-            tail = (tail + 1) % items.length;
-            size++;
-            produced++;
-            inserted = true;
+            enter();
+            try {
+                items[tail] = value;
+                tail = (tail + 1) % items.length;
+                size++;
+                produced++;
+                inserted = true;
+            } finally { inside.decrementAndGet(); }
         } finally {
             if (locked) mutex.release();
             // Devolve a reserva se interrompido antes da insercao.
@@ -47,12 +74,15 @@ public final class BoundedBuffer {
         try {
             mutex.acquire();
             locked = true;
-            value = items[head];
-            items[head] = 0;
-            head = (head + 1) % items.length;
-            size--;
-            consumed++;
-            removed = true;
+            enter();
+            try {
+                value = items[head];
+                items[head] = 0;
+                head = (head + 1) % items.length;
+                size--;
+                consumed++;
+                removed = true;
+            } finally { inside.decrementAndGet(); }
         } finally {
             if (locked) mutex.release();
             if (removed) empty.release(); else full.release();
@@ -60,12 +90,82 @@ public final class BoundedBuffer {
         return value;
     }
 
+    /**
+     * Insercao SEM o mutex. Os semaforos continuam garantindo que ha vaga;
+     * so a exclusao mutua foi desligada. windowMillis e a pausa entre ler e
+     * escrever o contador: e nessa janela que a outra thread pode entrar.
+     */
+    public UnsafeResult offerUnprotected(int value, long timeoutMillis, long windowMillis)
+            throws InterruptedException {
+        if (value <= 0) throw new IllegalArgumentException("Item deve ser positivo");
+        if (!empty.tryAcquire(timeoutMillis, TimeUnit.MILLISECONDS)) return UnsafeResult.notDone();
+        boolean overlap = enter();          // ja havia alguem na regiao critica?
+        int seen, found, written;
+        try {
+            seen = size;                    // 1. LE o contador compartilhado
+            items[tail] = value;
+            tail = (tail + 1) % items.length;
+            pause(windowMillis);            // 2. "calcula": a outra thread pode entrar aqui
+            found = size;                   // o que a outra thread deixou no contador
+            written = seen + 1;
+            size = written;                 // 3. ESCREVE: se found != seen, apaga a escrita da outra
+            produced++;
+            overlap |= inside.get() > 1;    // alguem entrou enquanto eu estava aqui?
+        } finally { inside.decrementAndGet(); }
+        full.release();
+        return finish(value, overlap, seen, found, written);
+    }
+
+    /** Retirada SEM o mutex; mesma ideia de offerUnprotected. */
+    public UnsafeResult pollUnprotected(long timeoutMillis, long windowMillis)
+            throws InterruptedException {
+        if (!full.tryAcquire(timeoutMillis, TimeUnit.MILLISECONDS)) return UnsafeResult.notDone();
+        boolean overlap = enter();
+        int value, seen, found, written;
+        try {
+            seen = size;                    // 1. LE o contador
+            value = items[head];
+            items[head] = 0;
+            head = (head + 1) % items.length;
+            pause(windowMillis);            // 2. janela da corrida
+            found = size;
+            written = seen - 1;
+            size = written;                 // 3. ESCREVE
+            consumed++;
+            overlap |= inside.get() > 1;
+        } finally { inside.decrementAndGet(); }
+        empty.release();
+        return finish(value, overlap, seen, found, written);
+    }
+
+    /** Marca a entrada na regiao critica; devolve true se ja havia outra thread la. */
+    private boolean enter() {
+        boolean overlap = inside.incrementAndGet() > 1;
+        if (overlap) overlaps.incrementAndGet();
+        return overlap;
+    }
+
+    private UnsafeResult finish(int value, boolean overlap, int seen, int found, int written) {
+        boolean lost = found != seen;       // o contador mudou durante a minha janela
+        if (lost) lostUpdates.incrementAndGet();
+        return new UnsafeResult(true, value, overlap, lost, seen, found, written);
+    }
+
+    /** Pausa que nao abandona a operacao no meio: se interrompida, termina e repassa o aviso. */
+    private static void pause(long millis) {
+        if (millis <= 0) return;
+        try { Thread.sleep(millis); }
+        catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    }
+
     public Snapshot snapshot() {
         mutex.acquireUninterruptibly();
         try {
             List<Integer> slots = new ArrayList<>();
-            for (int item : items) slots.add(item);
-            return new Snapshot(List.copyOf(slots), size, tail, head, produced, consumed);
+            int notes = 0;
+            for (int item : items) { slots.add(item); if (item != 0) notes++; }
+            return new Snapshot(List.copyOf(slots), size, tail, head, produced, consumed,
+                                notes, inside.get(), overlaps.get(), lostUpdates.get());
         } finally { mutex.release(); }
     }
 }

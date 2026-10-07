@@ -71,6 +71,46 @@ public final class SimulationTest {
             simulation.pause(); simulation.start(); simulation.close();
             check(simulation.awaitTermination(1000), "Threads devem encerrar");
         }
-        System.out.println("OK: capacidade, FIFO, concorrencia, interrupcao, cheio/vazio, pausa, reset e encerramento");
+        // Operacoes sem protecao, usadas por uma thread so: nada de errado acontece.
+        BoundedBuffer alone = new BoundedBuffer(3);
+        for (int i = 1; i <= 3; i++) check(alone.offerUnprotected(i, 0, 0).done(), "Sem protecao insere");
+        check(!alone.offerUnprotected(4, 0, 0).done(), "Sem protecao respeita vagas (semaforo)");
+        for (int i = 1; i <= 3; i++) {
+            BoundedBuffer.UnsafeResult r = alone.pollUnprotected(0, 0);
+            check(r.done() && r.item() == i && !r.overlap() && !r.lostUpdate(), "Sozinho: FIFO e sem corrida");
+        }
+        check(!alone.pollUnprotected(0, 0).done(), "Sem protecao respeita itens (semaforo)");
+        check(alone.snapshot().size() == 0 && alone.snapshot().overlaps() == 0, "Sozinho: contador certo");
+
+        // Modo protegido em ritmo maximo: nunca ha duas threads na regiao critica.
+        try (Simulation simulation = new Simulation()) {
+            simulation.rates(10, 10); simulation.start();
+            Thread.sleep(1500);
+            simulation.pause();
+            var snap = simulation.view().buffer();
+            check(snap.overlaps() == 0 && snap.lostUpdates() == 0, "Com mutex nao ha corrida");
+            check(snap.size() == snap.notesInSlots(), "Com mutex o contador bate com as notas");
+            simulation.close();
+        }
+
+        // Modo sem protecao: a corrida deve ser detectada.
+        try (Simulation simulation = new Simulation()) {
+            simulation.setProtected(false);
+            check(!simulation.view().protectedMode(), "Modo sem protecao ligado");
+            simulation.rates(10, 10); simulation.start();
+            boolean refused = false;
+            try { simulation.setProtected(true); } catch (IllegalStateException e) { refused = true; }
+            check(refused, "Nao troca o modo com a simulacao rodando");
+            until(() -> simulation.view().buffer().overlaps() > 0);
+            until(() -> simulation.view().events().stream().anyMatch(e -> e.startsWith("CORRIDA")));
+            simulation.pause();
+            simulation.setProtected(true);
+            check(simulation.view().protectedMode() && simulation.view().buffer().overlaps() == 0,
+                  "Voltar ao modo protegido reinicia o buffer");
+            simulation.close();
+            check(simulation.awaitTermination(2000), "Threads devem encerrar no modo sem protecao");
+        }
+        System.out.println("OK: capacidade, FIFO, concorrencia, interrupcao, cheio/vazio, pausa, reset, encerramento"
+                + " e deteccao de corrida sem mutex");
     }
 }

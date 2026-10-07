@@ -39,6 +39,9 @@ make run-simulation
 |---|---|---|---|
 | **10** | **0,2** | Buffer cheio; **"Produtor: Aguardando vaga: buffer cheio"** | "Dormindo em `sem_wait(&empty)`, com `empty = 0`." |
 | **0,2** | **10** | Buffer vazio; **"Consumidor: Aguardando item: buffer vazio"** | "Dormindo em `sem_wait(&full)`, com `full = 0`." |
+| **10** | **3**, com **"Rodar SEM proteção"** marcado (opcional) | Alerta vermelho **"CONDIÇÃO DE CORRIDA DETECTADA"**; borda vermelha no buffer; contador maior que as notas (ex.: "-3 vagas livres") | "Sem o `mutex`, o contador compartilhado estraga, como o `contador++`. Os semáforos continuam ligados." |
+
+Para marcar a opção, a simulação precisa estar pausada ou parada; trocar o modo reinicia o buffer. Com ritmos iguais (2 e 2) a corrida quase não aparece: o consumidor fica sempre esperando o produtor.
 
 Na tela: 10 posições = `N`; W = `hi` (próxima escrita); R = `lo` (próxima leitura); "itens disponíveis" = `full`; "vagas livres" = `empty`.
 

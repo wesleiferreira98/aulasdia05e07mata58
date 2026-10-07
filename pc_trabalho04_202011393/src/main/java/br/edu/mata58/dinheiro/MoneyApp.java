@@ -20,6 +20,10 @@ public final class MoneyApp extends Application {
     private final TextArea log = new TextArea();
     private final ProgressBar occupancy = new ProgressBar(0);
     private final Button start = new Button("Iniciar"), pause = new Button("Pausar");
+    // Modo da aula: desliga o mutex e mostra a condicao de corrida acontecendo.
+    private final CheckBox unprotected = new CheckBox("Rodar SEM proteção (desliga o mutex)");
+    private final Label modeWarning = new Label(), raceAlert = new Label();
+    private VBox bufferCard;
     private Timeline timeline;
 
     @Override public void start(Stage stage) {
@@ -41,7 +45,7 @@ public final class MoneyApp extends Application {
             GridPane.setHgrow(slots[i], Priority.ALWAYS);
         }
         occupancy.setMaxWidth(Double.MAX_VALUE);
-        VBox bufferCard = new VBox(14, new Label("BUFFER CIRCULAR: NOTAS EM ORDEM FIFO"),
+        bufferCard = new VBox(14, new Label("BUFFER CIRCULAR: NOTAS EM ORDEM FIFO"),
                 summary, occupancy, grid, counters);
         bufferCard.getStyleClass().add("card");
         Label explanation = new Label("Vagas permitem produzir. Itens permitem consumir. "
@@ -54,12 +58,28 @@ public final class MoneyApp extends Application {
         pause.setOnAction(event -> { simulation.pause(); refresh(); });
         Button reset = new Button("Reiniciar");
         reset.setOnAction(event -> { simulation.reset(); refresh(); });
-        HBox buttons = new HBox(12, start, pause, reset);
+        unprotected.getStyleClass().add("unsafe-check");
+        unprotected.setOnAction(event -> {
+            try { simulation.setProtected(!unprotected.isSelected()); }
+            catch (IllegalStateException running) { unprotected.setSelected(!unprotected.isSelected()); }
+            refresh();
+        });
+        HBox buttons = new HBox(12, start, pause, reset, unprotected);
+        buttons.setAlignment(Pos.CENTER_LEFT);
+        modeWarning.setText("MODO SEM PROTEÇÃO: o mutex está desligado. Produtor e consumidor podem entrar "
+                + "juntos na região crítica e estragar o contador do buffer. Os semáforos de vagas e itens "
+                + "continuam ligados.");
+        modeWarning.setWrapText(true);
+        modeWarning.getStyleClass().add("warning");
+        raceAlert.setWrapText(true);
+        raceAlert.getStyleClass().add("alert");
         Label challenge = new Label("Experimente: produtor mais rápido → buffer cheio; "
-                + "consumidor mais rápido → buffer vazio. Quem precisa esperar em cada caso?");
+                + "consumidor mais rápido → buffer vazio. Quem precisa esperar em cada caso? "
+                + "Para ver a condição de corrida: pause, marque \"Rodar SEM proteção\", "
+                + "ponha o produtor em 10 e o consumidor em 3.");
         challenge.setWrapText(true);
         log.setEditable(false); log.setPrefRowCount(6); log.setFocusTraversable(false);
-        VBox content = new VBox(16, header, subtitle, bufferCard, rates, buttons, challenge,
+        VBox content = new VBox(16, header, subtitle, modeWarning, raceAlert, bufferCard, rates, buttons, challenge,
                 new Label("Últimos eventos (mais recente primeiro)"), log);
         content.setPadding(new Insets(24));
         ScrollPane scroll = new ScrollPane(content);
@@ -108,9 +128,30 @@ public final class MoneyApp extends Application {
         start.setText(view.state() == Simulation.State.PAUSED ? "Continuar" : "Iniciar");
         start.setDisable(view.state() == Simulation.State.RUNNING);
         pause.setDisable(view.state() != Simulation.State.RUNNING);
+        // O modo so pode ser trocado com a simulacao parada.
+        unprotected.setDisable(view.state() == Simulation.State.RUNNING);
+        unprotected.setSelected(!view.protectedMode());
+        show(modeWarning, !view.protectedMode());
+        // size e o contador compartilhado: e ele que a corrida estraga.
         summary.setText(buffer.size() + " itens disponíveis   |   " + (10 - buffer.size()) + " vagas livres");
-        occupancy.setProgress(buffer.size() / 10.0);
-        counters.setText("Produzidas: " + buffer.produced() + "   Consumidas: " + buffer.consumed());
+        occupancy.setProgress(Math.max(0, Math.min(1, buffer.size() / 10.0)));
+        counters.setText("Produzidas: " + buffer.produced() + "   Consumidas: " + buffer.consumed()
+                + "   Notas nas posições: " + buffer.notesInSlots());
+        boolean raceNow = buffer.insideNow() > 1;
+        boolean raceSeen = buffer.overlaps() > 0 || buffer.lostUpdates() > 0;
+        show(raceAlert, raceSeen || raceNow);
+        if (raceSeen || raceNow) {
+            raceAlert.setText("⚠ CONDIÇÃO DE CORRIDA DETECTADA\n"
+                    + (raceNow ? "AGORA: produtor e consumidor estão juntos na região crítica!\n" : "")
+                    + "Vezes em que os dois estiveram juntos na região crítica: " + buffer.overlaps() + "\n"
+                    + "Atualizações do contador perdidas: " + buffer.lostUpdates() + "\n"
+                    + "Contador do buffer: " + buffer.size() + "   |   Notas de verdade nas posições: "
+                    + buffer.notesInSlots()
+                    + (buffer.size() != buffer.notesInSlots()
+                       ? "   (diferentes! pause e confira: a diferença permanece)" : ""));
+        }
+        if (raceNow) { if (!bufferCard.getStyleClass().contains("race-live")) bufferCard.getStyleClass().add("race-live"); }
+        else bufferCard.getStyleClass().remove("race-live");
         production.setText("Produtor: " + view.producerStatus());
         consumption.setText("Consumidor: " + view.consumerStatus());
         for (int i = 0; i < slots.length; i++) {
@@ -121,6 +162,11 @@ public final class MoneyApp extends Application {
         }
         String text = String.join("\n", view.events());
         if (!text.equals(log.getText())) log.setText(text);
+    }
+
+    private static void show(Label label, boolean visible) {
+        label.setVisible(visible);
+        label.setManaged(visible);
     }
 
     @Override public void stop() {

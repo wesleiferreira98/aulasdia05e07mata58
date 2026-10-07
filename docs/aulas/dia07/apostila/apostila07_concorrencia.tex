@@ -697,6 +697,19 @@ Um \textbf{semáforo} é um contador inteiro que nunca fica negativo, com duas o
 \cmd{sem\_post(\&s)} (também chamada \emph{up} ou V): soma 1 e, se houver thread dormindo em \cmd{s}, acorda uma.
 \end{definicao}
 
+\begin{pergunta}[Duas versões da mesma ideia]
+A definição acima é a do POSIX, a que o \cmd{sem\_wait} do Linux segue: o valor nunca fica negativo e as threads que esperam ficam numa fila à parte. Em livros como o Silberschatz, aparece outra versão, em que \emph{wait} \textbf{sempre} diminui o valor, que pode ficar negativo:
+
+\begin{lstlisting}[style=terminal]
+wait(S):                          signal(S):
+    S.valor = S.valor - 1             S.valor = S.valor + 1
+    se S.valor < 0:                   se S.valor <= 0:
+        entra na fila e dorme             acorda uma thread da fila
+\end{lstlisting}
+
+Nessa versão, um valor negativo diz \textbf{quantas threads estão esperando}: $-2$ significa duas na fila. O comportamento visto de fora é o mesmo: quem não pode seguir dorme, e cada \emph{signal} libera uma thread ou guarda uma permissão. A diferença é só de implementação.
+\end{pergunta}
+
 O teste, a alteração do contador e a decisão de dormir são feitos \textbf{atomicamente} pelo sistema: não há a corrida que estragou a variável de trava.
 
 \begin{exemplo}[Analogia: estacionamento com placa de vagas]

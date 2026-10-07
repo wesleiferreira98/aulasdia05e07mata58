@@ -112,7 +112,7 @@ O `peterson-code.c` revisado sempre dá 20000. Se perguntarem por que usa atomic
 
 ## 20 a 28 min: semáforos
 
-Defina no quadro: semáforo é um **contador que nunca fica negativo**.
+Defina no quadro: semáforo é um **contador que nunca fica negativo** (a versão POSIX, que o `sem_wait` segue). Se um aluno trouxer a versão do Silberschatz, em que o valor fica negativo e indica quantas threads esperam, confirme: é a mesma ideia, só muda a implementação.
 
 - `sem_wait` (down, P): se o contador for maior que 0, diminui 1 e segue; se for 0, a thread **dorme**.
 - `sem_post` (up, V): soma 1 e acorda quem estiver dormindo.
@@ -154,6 +154,10 @@ Abra a janela (`make run-simulation`) e faça dois movimentos:
 
 1. **Produtor 10 itens/s, consumidor 0,2.** O buffer enche e aparece "Produtor: Aguardando vaga: buffer cheio". Diga: "Ele está dormindo em `sem_wait(&empty)`, e `empty` vale 0."
 2. **Inverta as velocidades.** O buffer esvazia e aparece "Consumidor: Aguardando item: buffer vazio". Diga: "Agora é o consumidor, em `sem_wait(&full)`."
+
+3. **Opcional, se der tempo (cerca de 2 min): desligue o mutex.** Pause, marque **"Rodar SEM proteção (desliga o mutex)"**, ponha o produtor em 10 e o consumidor em 3 e clique em Iniciar. Em poucos segundos aparece o alerta vermelho **"CONDIÇÃO DE CORRIDA DETECTADA"**, e o buffer ganha borda vermelha enquanto as duas threads estão juntas na região crítica. Pause: o contador fica errado de vez (por exemplo, "13 itens disponíveis | -3 vagas livres" com só 9 notas nas posições). Diga: "Os semáforos continuam ligados, então nenhuma nota foi perdida. O que estragou foi o contador compartilhado: é o `contador++` do começo da aula. É isso que o `mutex` protege."
+
+   Com ritmos iguais (2 e 2), a corrida quase não aparece: o buffer fica com 0 ou 1 nota, o consumidor está sempre dormindo em `full` e as duas threads nunca se encontram. Se alguém perguntar, é uma boa observação: a condição de corrida depende da intercalação.
 
 Feche: "O `mutex` garante que ninguém atrapalha. `empty` e `full` garantem que ninguém trabalha sem ter o que precisa."
 
