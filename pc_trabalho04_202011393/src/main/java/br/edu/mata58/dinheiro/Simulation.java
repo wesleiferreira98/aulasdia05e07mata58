@@ -6,8 +6,24 @@ import java.util.List;
 /** Ciclo de vida cooperativo. Nunca suspende uma thread segurando um semaforo. */
 public final class Simulation implements AutoCloseable {
     public enum State { READY, RUNNING, PAUSED, CLOSED }
+
+    /** Como o buffer e protegido. */
+    public enum Mode {
+        SEMAPHORES("Semáforos"),        // empty, full e mutex (o padrao)
+        MONITOR("Monitor"),             // synchronized, wait() e notifyAll(), sem semaforos
+        UNPROTECTED("Sem proteção");    // semaforos sem o mutex: a corrida aparece
+        private final String label;
+        Mode(String label) { this.label = label; }
+        @Override public String toString() { return label; }
+    }
+
     public record View(BoundedBuffer.Snapshot buffer, State state, String producerStatus,
-                       String consumerStatus, List<String> events, boolean protectedMode) {}
+                       String consumerStatus, List<String> events, Mode mode) {
+        public boolean protectedMode() { return mode != Mode.UNPROTECTED; }
+    }
+
+    /** Espera maxima dentro do wait() do monitor antes de reconferir pausa e reinicio. */
+    private static final long MONITOR_WAIT_MILLIS = 100;
 
     /** Pausa entre ler e escrever o contador no modo sem protecao (a janela da corrida). */
     public static final long RACE_WINDOW_MILLIS = 250;
@@ -20,7 +36,7 @@ public final class Simulation implements AutoCloseable {
     private double producerRate = 2, consumerRate = 2;
     private int nextItem = 1;
     private long generation;
-    private boolean protectedMode = true;   // false = mutex desligado (modo da aula)
+    private Mode mode = Mode.SEMAPHORES;
     private final Thread producer = new Thread(() -> work(true), "produtor");
     private final Thread consumer = new Thread(() -> work(false), "consumidor");
 
@@ -37,7 +53,7 @@ public final class Simulation implements AutoCloseable {
             if (state != State.RUNNING) {
                 state = State.RUNNING;
                 generation++;
-                log("Simulacao em execucao" + (protectedMode ? "" : " SEM PROTECAO (mutex desligado)"));
+                log("Simulacao em execucao: modo " + modeName());
                 gate.notifyAll();
             }
         }
@@ -65,23 +81,34 @@ public final class Simulation implements AutoCloseable {
             nextItem = 1;
             producerStatus = consumerStatus = "Pronto";
             events.clear();
-            log("Buffer reiniciado" + (protectedMode ? "" : " (modo SEM PROTECAO)"));
+            log("Buffer reiniciado: modo " + modeName());
             gate.notifyAll();
         }
     }
 
     /**
-     * Liga ou desliga o mutex. So pode ser trocado com a simulacao parada,
+     * Troca o modo de protecao. So pode ser trocado com a simulacao parada,
      * e a troca reinicia o buffer para comecar a comparacao do zero.
      */
-    public void setProtected(boolean on) {
+    public void setMode(Mode newMode) {
         synchronized (gate) {
             ensureOpen();
             if (state == State.RUNNING)
                 throw new IllegalStateException("Pause a simulacao antes de trocar o modo");
-            protectedMode = on;
+            mode = newMode;
         }
         reset();
+    }
+
+    /** Atalho: true = semaforos com mutex; false = sem protecao. */
+    public void setProtected(boolean on) { setMode(on ? Mode.SEMAPHORES : Mode.UNPROTECTED); }
+
+    private String modeName() {
+        return switch (mode) {
+            case SEMAPHORES -> "semaforos";
+            case MONITOR -> "monitor";
+            case UNPROTECTED -> "SEM PROTECAO (mutex desligado)";
+        };
     }
 
     public void rates(double production, double consumption) {
@@ -106,8 +133,8 @@ public final class Simulation implements AutoCloseable {
                         if (state == State.CLOSED) return;
                         gate.wait();
                     }
-                    if (protectedMode) {
-                        // Modo protegido: igual ao original, tudo serializado pelo gate.
+                    if (mode == Mode.SEMAPHORES) {
+                        // Modo semaforos: igual ao original, tudo serializado pelo gate.
                         boolean changed;
                         if (producing) {
                             changed = buffer.offer(nextItem, 0);
@@ -127,12 +154,47 @@ public final class Simulation implements AutoCloseable {
                         waitInterval(producing);
                         continue;
                     }
-                    // Modo sem protecao: prepara a operacao e SAI do gate, para que
-                    // produtor e consumidor possam estar na regiao critica ao mesmo tempo.
                     target = buffer;
                     item = nextItem;
-                    if (producing) producerStatus = "Na região crítica, SEM mutex";
-                    else consumerStatus = "Na região crítica, SEM mutex";
+                    if (mode == Mode.MONITOR) {
+                        // Modo monitor: a espera acontece no wait() do PROPRIO buffer,
+                        // entao a operacao roda fora do gate (senao ninguem entraria).
+                        gate.notifyAll();
+                    } else {
+                        // Modo sem protecao: prepara a operacao e SAI do gate, para que
+                        // produtor e consumidor possam estar na regiao critica ao mesmo tempo.
+                        if (producing) producerStatus = "Na região crítica, SEM mutex";
+                        else consumerStatus = "Na região crítica, SEM mutex";
+                    }
+                }
+
+                if (mode == Mode.MONITOR) {
+                    boolean done;
+                    Integer taken = null;
+                    if (producing) done = target.offerMonitor(item, MONITOR_WAIT_MILLIS);
+                    else { taken = target.pollMonitor(MONITOR_WAIT_MILLIS); done = taken != null; }
+                    synchronized (gate) {
+                        if (target != buffer || state == State.CLOSED) continue;  // houve reset no meio
+                        if (!done) {
+                            // O wait() do monitor acabou sem vaga ou sem item: volta ao inicio
+                            // do laco, que respeita pausa e reinicio, e espera de novo.
+                            if (state == State.RUNNING) {
+                                if (producing) producerStatus = "Aguardando vaga: dormindo em wait() no monitor";
+                                else consumerStatus = "Aguardando item: dormindo em wait() no monitor";
+                            }
+                            continue;
+                        }
+                        if (producing) {
+                            producerStatus = "Produzindo";
+                            log("Produziu nota #" + nextItem++ + " (notifyAll acorda quem espera item)");
+                        } else {
+                            consumerStatus = "Consumindo";
+                            log("Consumiu nota #" + taken + " (notifyAll acorda quem espera vaga)");
+                        }
+                        gate.notifyAll();
+                        waitInterval(producing);
+                    }
+                    continue;
                 }
 
                 BoundedBuffer.UnsafeResult result = producing
@@ -187,7 +249,7 @@ public final class Simulation implements AutoCloseable {
     public View view() {
         synchronized (gate) {
             return new View(buffer.snapshot(), state, producerStatus, consumerStatus,
-                            List.copyOf(events), protectedMode);
+                            List.copyOf(events), mode);
         }
     }
 

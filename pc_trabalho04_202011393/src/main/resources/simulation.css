@@ -12,3 +12,9 @@
 .label.alert { -fx-background-color: #fdecea; -fx-border-color: #c0392b; -fx-border-width: 3; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 14 18; -fx-text-fill: #8e1b10; -fx-font-weight: bold; -fx-font-size: 17px; }
 .card.race-live { -fx-border-color: #c0392b; -fx-border-width: 5; -fx-border-radius: 14; }
 .unsafe-check { -fx-font-weight: bold; -fx-text-fill: #8e1b10; }
+.label.info { -fx-background-color: #e8f4fd; -fx-border-color: #2e86c1; -fx-border-width: 2; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 12 16; -fx-text-fill: #1b4f72; -fx-font-weight: bold; }
+.label.tag-ok { -fx-background-color: #def7e9; -fx-text-fill: #145638; -fx-font-weight: bold; -fx-padding: 3 10; -fx-background-radius: 8; }
+.label.tag-bad { -fx-background-color: #fdecea; -fx-text-fill: #8e1b10; -fx-font-weight: bold; -fx-padding: 3 10; -fx-background-radius: 8; }
+.tab-pane > .tab-header-area .tab .tab-label { -fx-font-weight: bold; -fx-padding: 4 10; }
+.progress-bar.dave-bar > .bar { -fx-background-color: #1f6fb2; }
+.progress-bar.bill-bar > .bar { -fx-background-color: #c0560f; }

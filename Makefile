@@ -56,7 +56,7 @@ run-java-3s: java
 .PHONY: test-simulation run-simulation
 test-simulation:
 	mkdir -p $(BUILD)/simulation-tests
-	java -m jdk.compiler/com.sun.tools.javac.Main -d $(BUILD)/simulation-tests pc_trabalho04_202011393/src/main/java/br/edu/mata58/dinheiro/BoundedBuffer.java pc_trabalho04_202011393/src/main/java/br/edu/mata58/dinheiro/Simulation.java pc_trabalho04_202011393/src/test/java/br/edu/mata58/dinheiro/SimulationTest.java
+	java -m jdk.compiler/com.sun.tools.javac.Main -d $(BUILD)/simulation-tests pc_trabalho04_202011393/src/main/java/br/edu/mata58/dinheiro/BoundedBuffer.java pc_trabalho04_202011393/src/main/java/br/edu/mata58/dinheiro/Simulation.java pc_trabalho04_202011393/src/main/java/br/edu/mata58/dinheiro/Mailbox.java pc_trabalho04_202011393/src/main/java/br/edu/mata58/dinheiro/MailboxSimulation.java pc_trabalho04_202011393/src/test/java/br/edu/mata58/dinheiro/SimulationTest.java pc_trabalho04_202011393/src/test/java/br/edu/mata58/dinheiro/MailboxTest.java
 	java -cp $(BUILD)/simulation-tests br.edu.mata58.dinheiro.SimulationTest
 run-simulation:
 	mvn -f pc_trabalho04_202011393/pom.xml javafx:run

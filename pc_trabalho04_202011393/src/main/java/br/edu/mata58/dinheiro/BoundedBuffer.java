@@ -10,6 +10,12 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Buffer FIFO: vagas/itens reservam disponibilidade; mutex protege o estado.
  *
+ * Ha tres jeitos de usar o buffer, um para cada modo da simulacao:
+ *   offer/poll                       semaforos (empty, full, mutex), o padrao;
+ *   offerMonitor/pollMonitor         monitor Java (synchronized, wait, notifyAll);
+ *   offerUnprotected/pollUnprotected semaforos SEM o mutex (mostra a corrida).
+ * Um mesmo objeto e usado em um modo so: trocar o modo cria um buffer novo.
+ *
  * Alem das operacoes protegidas (offer/poll), ha versoes SEM PROTECAO
  * (offerUnprotected/pollUnprotected) para a aula: elas continuam usando os
  * semaforos de vagas e itens, mas NAO pegam o mutex. A atualizacao do
@@ -138,6 +144,52 @@ public final class BoundedBuffer {
         return finish(value, overlap, seen, found, written);
     }
 
+    /**
+     * Insercao com MONITOR, sem semaforos: o proprio objeto e o monitor.
+     * synchronized da a chave (exclusao mutua); while + wait() espera vaga
+     * soltando a chave; notifyAll() acorda quem esperava item.
+     * Devolve false se o tempo acabar sem vaga (para a simulacao poder pausar).
+     */
+    public synchronized boolean offerMonitor(int value, long timeoutMillis) throws InterruptedException {
+        if (value <= 0) throw new IllegalArgumentException("Item deve ser positivo");
+        long deadline = System.nanoTime() + timeoutMillis * 1_000_000;
+        while (size == items.length) {              // cheio: espera vaga
+            long left = (deadline - System.nanoTime()) / 1_000_000;
+            if (left <= 0) return false;
+            wait(left);                             // solta a chave e dorme; ao acordar, reconfere
+        }
+        enter();
+        try {
+            items[tail] = value;
+            tail = (tail + 1) % items.length;
+            size++;
+            produced++;
+        } finally { inside.decrementAndGet(); }
+        notifyAll();                                // acorda o consumidor, se ele dormia
+        return true;
+    }
+
+    /** Retirada com MONITOR: espelho de offerMonitor. Devolve null se o tempo acabar. */
+    public synchronized Integer pollMonitor(long timeoutMillis) throws InterruptedException {
+        long deadline = System.nanoTime() + timeoutMillis * 1_000_000;
+        while (size == 0) {                         // vazio: espera item
+            long left = (deadline - System.nanoTime()) / 1_000_000;
+            if (left <= 0) return null;
+            wait(left);
+        }
+        int value;
+        enter();
+        try {
+            value = items[head];
+            items[head] = 0;
+            head = (head + 1) % items.length;
+            size--;
+            consumed++;
+        } finally { inside.decrementAndGet(); }
+        notifyAll();                                // acorda o produtor, se ele dormia
+        return value;
+    }
+
     /** Marca a entrada na regiao critica; devolve true se ja havia outra thread la. */
     private boolean enter() {
         boolean overlap = inside.incrementAndGet() > 1;
@@ -159,13 +211,18 @@ public final class BoundedBuffer {
     }
 
     public Snapshot snapshot() {
+        // Pega as duas protecoes: o mutex (modo semaforos) e o monitor (modo monitor).
         mutex.acquireUninterruptibly();
         try {
-            List<Integer> slots = new ArrayList<>();
-            int notes = 0;
-            for (int item : items) { slots.add(item); if (item != 0) notes++; }
-            return new Snapshot(List.copyOf(slots), size, tail, head, produced, consumed,
-                                notes, inside.get(), overlaps.get(), lostUpdates.get());
+            synchronized (this) { return snapshotLocked(); }
         } finally { mutex.release(); }
+    }
+
+    private Snapshot snapshotLocked() {
+        List<Integer> slots = new ArrayList<>();
+        int notes = 0;
+        for (int item : items) { slots.add(item); if (item != 0) notes++; }
+        return new Snapshot(List.copyOf(slots), size, tail, head, produced, consumed,
+                            notes, inside.get(), overlaps.get(), lostUpdates.get());
     }
 }

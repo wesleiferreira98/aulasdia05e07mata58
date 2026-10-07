@@ -155,7 +155,7 @@ Abra a janela (`make run-simulation`) e faça dois movimentos:
 1. **Produtor 10 itens/s, consumidor 0,2.** O buffer enche e aparece "Produtor: Aguardando vaga: buffer cheio". Diga: "Ele está dormindo em `sem_wait(&empty)`, e `empty` vale 0."
 2. **Inverta as velocidades.** O buffer esvazia e aparece "Consumidor: Aguardando item: buffer vazio". Diga: "Agora é o consumidor, em `sem_wait(&full)`."
 
-3. **Opcional, se der tempo (cerca de 2 min): desligue o mutex.** Pause, marque **"Rodar SEM proteção (desliga o mutex)"**, ponha o produtor em 10 e o consumidor em 3 e clique em Iniciar. Em poucos segundos aparece o alerta vermelho **"CONDIÇÃO DE CORRIDA DETECTADA"**, e o buffer ganha borda vermelha enquanto as duas threads estão juntas na região crítica. Pause: o contador fica errado de vez (por exemplo, "13 itens disponíveis | -3 vagas livres" com só 9 notas nas posições). Diga: "Os semáforos continuam ligados, então nenhuma nota foi perdida. O que estragou foi o contador compartilhado: é o `contador++` do começo da aula. É isso que o `mutex` protege."
+3. **Opcional, se der tempo (cerca de 2 min): desligue o mutex.** Pause, escolha **"SEM proteção (desliga o mutex)"** na caixa "Proteção do buffer", ponha o produtor em 10 e o consumidor em 3 e clique em Iniciar. Em poucos segundos aparece o alerta vermelho **"CONDIÇÃO DE CORRIDA DETECTADA"**, e o buffer ganha borda vermelha enquanto as duas threads estão juntas na região crítica. Pause: o contador fica errado de vez (por exemplo, "13 itens disponíveis | -3 vagas livres" com só 9 notas nas posições). Diga: "Os semáforos continuam ligados, então nenhuma nota foi perdida. O que estragou foi o contador compartilhado: é o `contador++` do começo da aula. É isso que o `mutex` protege."
 
    Com ritmos iguais (2 e 2), a corrida quase não aparece: o buffer fica com 0 ou 1 nota, o consumidor está sempre dormindo em `full` e as duas threads nunca se encontram. Se alguém perguntar, é uma boa observação: a condição de corrida depende da intercalação.
 
@@ -166,6 +166,8 @@ Se a simulação não abrir, pule e siga para monitores.
 ## 40 a 45 min: por que monitores?
 
 Fala de transição: "Semáforos funcionam, mas é fácil esquecer um, trocar a ordem ou proteger a coisa errada. O monitor junta os dados e a sincronização no mesmo objeto."
+
+**Opcional (1 min), se a simulação estiver aberta:** pause, escolha **"Monitor (synchronized, wait, notifyAll)"** e repita o produtor 10 e consumidor 0,2. O buffer enche como antes, mas agora aparece "Produtor: Aguardando vaga: dormindo em wait() no monitor". Diga: "Mesmo comportamento, outra ferramenta: nenhum semáforo, só o monitor do objeto."
 
 Use a analogia do guia: um banheiro com **uma chave única**. Quem tem a chave entra; os outros esperam. A chave é o lock do objeto.
 
@@ -260,6 +262,8 @@ Compare com a turma:
 - **Por que `while`:** quem acorda precisa disputar a chave de novo e **conferir** a condição.
 
 **Limite que você precisa dizer:** a 3s ainda pode **perder** mensagens. O produtor não espera a caixa esvaziar e pode sobrescrever uma mensagem não lida. Ela garante integridade, não entrega. A versão sem perdas está em [CaixaDeCorreio.java](../../../examples/dia07/caixa/CaixaDeCorreio.java) (`make run-caixa`). Mostre se sobrar tempo.
+
+**Para tornar isso visível (opcional, 2 min):** na janela da simulação, abra a aba **"Mailbox (exemplo do professor)"**. Em "Sem sincronização", as mensagens misturadas aparecem com letras das duas cores (Dave em azul, Bill em laranja). Pause, troque para "Monitor do professor" e inicie: nada se mistura, mas o alerta laranja conta as **mensagens perdidas**. Isso responde, ao vivo, a pergunta "a 3s entrega todas as mensagens?". "Monitor completo" mostra a versão sem perdas.
 
 As duplas respondem a **questão 6**.
 

@@ -20,11 +20,15 @@ public final class MoneyApp extends Application {
     private final TextArea log = new TextArea();
     private final ProgressBar occupancy = new ProgressBar(0);
     private final Button start = new Button("Iniciar"), pause = new Button("Pausar");
-    // Modo da aula: desliga o mutex e mostra a condicao de corrida acontecendo.
-    private final CheckBox unprotected = new CheckBox("Rodar SEM proteção (desliga o mutex)");
+    // Como o buffer e protegido: semaforos, monitor, ou sem protecao (mostra a corrida).
+    private final ToggleGroup modeGroup = new ToggleGroup();
+    private final RadioButton semaphoresMode = modeButton("Semáforos (empty, full, mutex)", Simulation.Mode.SEMAPHORES);
+    private final RadioButton monitorMode = modeButton("Monitor (synchronized, wait, notifyAll)", Simulation.Mode.MONITOR);
+    private final RadioButton unprotectedMode = modeButton("SEM proteção (desliga o mutex)", Simulation.Mode.UNPROTECTED);
     private final Label modeWarning = new Label(), raceAlert = new Label();
     private VBox bufferCard;
     private Timeline timeline;
+    private MailboxPane mailboxPane;    // segunda aba: o exemplo da Mailbox do professor
 
     @Override public void start(Stage stage) {
         Label title = new Label("Produção de dinheiro");
@@ -49,7 +53,8 @@ public final class MoneyApp extends Application {
                 summary, occupancy, grid, counters);
         bufferCard.getStyleClass().add("card");
         Label explanation = new Label("Vagas permitem produzir. Itens permitem consumir. "
-                + "O mutex protege a inserção e a retirada. W indica a próxima escrita; R, a próxima leitura.");
+                + "W indica a próxima escrita; R, a próxima leitura. A caixa no topo explica como o modo "
+                + "escolhido protege o buffer.");
         explanation.setWrapText(true);
         VBox rates = new VBox(12, rateControl("Banco / produtor", true), production,
                 rateControl("Carro-forte / consumidor", false), consumption, explanation);
@@ -58,37 +63,43 @@ public final class MoneyApp extends Application {
         pause.setOnAction(event -> { simulation.pause(); refresh(); });
         Button reset = new Button("Reiniciar");
         reset.setOnAction(event -> { simulation.reset(); refresh(); });
-        unprotected.getStyleClass().add("unsafe-check");
-        unprotected.setOnAction(event -> {
-            try { simulation.setProtected(!unprotected.isSelected()); }
-            catch (IllegalStateException running) { unprotected.setSelected(!unprotected.isSelected()); }
-            refresh();
-        });
-        HBox buttons = new HBox(12, start, pause, reset, unprotected);
+        unprotectedMode.getStyleClass().add("unsafe-check");
+        HBox buttons = new HBox(12, start, pause, reset);
         buttons.setAlignment(Pos.CENTER_LEFT);
-        modeWarning.setText("MODO SEM PROTEÇÃO: o mutex está desligado. Produtor e consumidor podem entrar "
-                + "juntos na região crítica e estragar o contador do buffer. Os semáforos de vagas e itens "
-                + "continuam ligados.");
+        Label modeTitle = new Label("Proteção do buffer (troque com a simulação parada):");
+        HBox modes = new HBox(20, semaphoresMode, monitorMode, unprotectedMode);
+        modes.setAlignment(Pos.CENTER_LEFT);
+        VBox modeCard = new VBox(10, modeTitle, modes);
+        modeCard.getStyleClass().add("card");
         modeWarning.setWrapText(true);
-        modeWarning.getStyleClass().add("warning");
         raceAlert.setWrapText(true);
         raceAlert.getStyleClass().add("alert");
+        modeWarning.setMaxWidth(Double.MAX_VALUE);
+        raceAlert.setMaxWidth(Double.MAX_VALUE);
         Label challenge = new Label("Experimente: produtor mais rápido → buffer cheio; "
                 + "consumidor mais rápido → buffer vazio. Quem precisa esperar em cada caso? "
-                + "Para ver a condição de corrida: pause, marque \"Rodar SEM proteção\", "
-                + "ponha o produtor em 10 e o consumidor em 3.");
+                + "Compare os modos: em Semáforos e em Monitor o comportamento é o mesmo; "
+                + "em SEM proteção, com produtor 10 e consumidor 3, aparece a condição de corrida.");
         challenge.setWrapText(true);
         log.setEditable(false); log.setPrefRowCount(6); log.setFocusTraversable(false);
-        VBox content = new VBox(16, header, subtitle, modeWarning, raceAlert, bufferCard, rates, buttons, challenge,
+        VBox content = new VBox(16, header, subtitle, modeWarning, raceAlert, bufferCard, rates, buttons, modeCard, challenge,
                 new Label("Últimos eventos (mais recente primeiro)"), log);
         content.setPadding(new Insets(24));
         ScrollPane scroll = new ScrollPane(content);
         scroll.setFitToWidth(true);
-        Scene scene = new Scene(scroll, 1000, 900);
+        mailboxPane = new MailboxPane();
+        Tab moneyTab = new Tab("Produção de dinheiro (produtor e consumidor)", scroll);
+        Tab mailboxTab = new Tab("Mailbox (exemplo do professor)", mailboxPane.node());
+        TabPane tabs = new TabPane(moneyTab, mailboxTab);
+        tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        Scene scene = new Scene(tabs, 1000, 900);
         scene.getStylesheets().add(getClass().getResource("/simulation.css").toExternalForm());
         stage.setTitle("MATA58 · Produtor e consumidor | Weslei Ferreira Santos");
         stage.setScene(scene); stage.setMinWidth(950); stage.setMinHeight(650);
-        timeline = new Timeline(new KeyFrame(Duration.millis(100), event -> refresh()));
+        timeline = new Timeline(new KeyFrame(Duration.millis(100), event -> {
+            refresh();
+            if (mailboxTab.isSelected()) mailboxPane.refresh();
+        }));
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play(); refresh(); stage.show();
     }
@@ -129,14 +140,28 @@ public final class MoneyApp extends Application {
         start.setDisable(view.state() == Simulation.State.RUNNING);
         pause.setDisable(view.state() != Simulation.State.RUNNING);
         // O modo so pode ser trocado com a simulacao parada.
-        unprotected.setDisable(view.state() == Simulation.State.RUNNING);
-        unprotected.setSelected(!view.protectedMode());
-        show(modeWarning, !view.protectedMode());
+        boolean running = view.state() == Simulation.State.RUNNING;
+        for (RadioButton b : new RadioButton[]{semaphoresMode, monitorMode, unprotectedMode}) {
+            b.setDisable(running);
+            b.setSelected(b.getUserData() == view.mode());
+        }
+        modeWarning.setText(switch (view.mode()) {
+            case SEMAPHORES -> "MODO SEMÁFOROS: empty conta as vagas, full conta os itens e o mutex "
+                    + "garante que só uma thread mexe no buffer por vez (como no prod_cons.c).";
+            case MONITOR -> "MODO MONITOR: o buffer é um objeto synchronized, sem nenhum semáforo. "
+                    + "Sem vaga, o produtor faz while (cheio) wait(); sem item, o consumidor faz "
+                    + "while (vazio) wait(). Quem insere ou retira chama notifyAll() para acordar o outro.";
+            case UNPROTECTED -> "MODO SEM PROTEÇÃO: o mutex está desligado. Produtor e consumidor podem entrar "
+                    + "juntos na região crítica e estragar o contador do buffer. Os semáforos de vagas e itens "
+                    + "continuam ligados.";
+        });
+        modeWarning.getStyleClass().setAll("label", view.protectedMode() ? "info" : "warning");
         // size e o contador compartilhado: e ele que a corrida estraga.
         summary.setText(buffer.size() + " itens disponíveis   |   " + (10 - buffer.size()) + " vagas livres");
         occupancy.setProgress(Math.max(0, Math.min(1, buffer.size() / 10.0)));
         counters.setText("Produzidas: " + buffer.produced() + "   Consumidas: " + buffer.consumed()
-                + "   Notas nas posições: " + buffer.notesInSlots());
+                + "   Notas nas posições: " + buffer.notesInSlots()
+                + "   Encontros na região crítica: " + buffer.overlaps());
         boolean raceNow = buffer.insideNow() > 1;
         boolean raceSeen = buffer.overlaps() > 0 || buffer.lostUpdates() > 0;
         show(raceAlert, raceSeen || raceNow);
@@ -164,6 +189,18 @@ public final class MoneyApp extends Application {
         if (!text.equals(log.getText())) log.setText(text);
     }
 
+    private RadioButton modeButton(String text, Simulation.Mode mode) {
+        RadioButton button = new RadioButton(text);
+        button.setToggleGroup(modeGroup);
+        button.setUserData(mode);
+        button.setOnAction(event -> {
+            try { simulation.setMode(mode); }
+            catch (IllegalStateException running) { /* so troca com a simulacao parada */ }
+            refresh();
+        });
+        return button;
+    }
+
     private static void show(Label label, boolean visible) {
         label.setVisible(visible);
         label.setManaged(visible);
@@ -172,6 +209,7 @@ public final class MoneyApp extends Application {
     @Override public void stop() {
         if (timeline != null) timeline.stop();
         simulation.close();
+        if (mailboxPane != null) mailboxPane.close();
     }
     public static void main(String[] args) { launch(args); }
 }

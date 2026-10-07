@@ -39,9 +39,12 @@ make run-simulation
 |---|---|---|---|
 | **10** | **0,2** | Buffer cheio; **"Produtor: Aguardando vaga: buffer cheio"** | "Dormindo em `sem_wait(&empty)`, com `empty = 0`." |
 | **0,2** | **10** | Buffer vazio; **"Consumidor: Aguardando item: buffer vazio"** | "Dormindo em `sem_wait(&full)`, com `full = 0`." |
-| **10** | **3**, com **"Rodar SEM proteção"** marcado (opcional) | Alerta vermelho **"CONDIÇÃO DE CORRIDA DETECTADA"**; borda vermelha no buffer; contador maior que as notas (ex.: "-3 vagas livres") | "Sem o `mutex`, o contador compartilhado estraga, como o `contador++`. Os semáforos continuam ligados." |
+| **10** | **0,2**, no modo **"Monitor"** (opcional, no bloco de monitores) | Buffer cheio; **"Produtor: Aguardando vaga: dormindo em wait() no monitor"**; caixa azul explicando o modo | "Mesmo comportamento, sem semáforos: o produtor faz `while (cheio) wait()` e solta a chave do objeto." |
+| **10** | **3**, no modo **"SEM proteção"** (opcional) | Alerta vermelho **"CONDIÇÃO DE CORRIDA DETECTADA"**; borda vermelha no buffer; contador maior que as notas (ex.: "-3 vagas livres") | "Sem o `mutex`, o contador compartilhado estraga, como o `contador++`. Os semáforos continuam ligados." |
 
-Para marcar a opção, a simulação precisa estar pausada ou parada; trocar o modo reinicia o buffer. Com ritmos iguais (2 e 2) a corrida quase não aparece: o consumidor fica sempre esperando o produtor.
+**Aba "Mailbox (exemplo do professor)"** (opcional, para fechar as práticas 2 e 3): escolha "Sem sincronização" e clique em Iniciar. As mensagens recebidas com as duas cores são as misturadas da 3b. Pause, troque para "Monitor do professor" e inicie: nada se mistura, mas o alerta laranja conta as **mensagens perdidas** (a limitação da 3s). "Monitor completo" e "Semáforos" mostram a versão sem perdas.
+
+O modo é escolhido na caixa "Proteção do buffer", abaixo dos botões: Semáforos (padrão), Monitor ou SEM proteção. Para trocar, a simulação precisa estar pausada ou parada; a troca reinicia o buffer. Com ritmos iguais (2 e 2) a corrida quase não aparece: o consumidor fica sempre esperando o produtor.
 
 Na tela: 10 posições = `N`; W = `hi` (próxima escrita); R = `lo` (próxima leitura); "itens disponíveis" = `full`; "vagas livres" = `empty`.
 

@@ -110,7 +110,49 @@ public final class SimulationTest {
             simulation.close();
             check(simulation.awaitTermination(2000), "Threads devem encerrar no modo sem protecao");
         }
-        System.out.println("OK: capacidade, FIFO, concorrencia, interrupcao, cheio/vazio, pausa, reset, encerramento"
-                + " e deteccao de corrida sem mutex");
+        // Buffer como monitor (synchronized, wait, notifyAll), sob concorrencia: FIFO e nada perdido.
+        BoundedBuffer monitor = new BoundedBuffer(10);
+        check(monitor.pollMonitor(10) == null, "Monitor vazio: retirada espera e desiste");
+        ExecutorService monitorWorkers = Executors.newFixedThreadPool(2);
+        try {
+            Future<?> producer = monitorWorkers.submit(() -> {
+                try {
+                    for (int i = 1; i <= 3000; i++)
+                        check(monitor.offerMonitor(i, 2000), "Produtor do monitor nao progride");
+                } catch (InterruptedException e) { throw new RuntimeException(e); }
+            });
+            Future<?> consumer = monitorWorkers.submit(() -> {
+                try {
+                    for (int i = 1; i <= 3000; i++) {
+                        Integer value = monitor.pollMonitor(2000);
+                        check(value != null && value == i, "FIFO no monitor");
+                    }
+                } catch (InterruptedException e) { throw new RuntimeException(e); }
+            });
+            producer.get(10, TimeUnit.SECONDS); consumer.get(10, TimeUnit.SECONDS);
+            var snap = monitor.snapshot();
+            check(snap.size() == 0 && snap.overlaps() == 0, "Monitor: sem itens perdidos e sem corrida");
+        } finally { monitorWorkers.shutdownNow(); }
+
+        // Modo monitor na simulacao: as esperas acontecem no wait() do buffer.
+        try (Simulation simulation = new Simulation()) {
+            simulation.setMode(Simulation.Mode.MONITOR);
+            check(simulation.view().mode() == Simulation.Mode.MONITOR, "Modo monitor ligado");
+            simulation.rates(10, 0.2); simulation.start();
+            until(() -> simulation.view().buffer().size() == 10);
+            until(() -> simulation.view().producerStatus().contains("wait()"));
+            simulation.pause(); Thread.sleep(300);
+            simulation.rates(0.2, 10); simulation.start();
+            until(() -> simulation.view().consumerStatus().contains("wait()"));
+            simulation.pause(); Thread.sleep(300);
+            var snap = simulation.view().buffer();
+            check(snap.overlaps() == 0 && snap.lostUpdates() == 0, "Monitor: nenhuma corrida");
+            check(snap.size() == snap.notesInSlots(), "Monitor: contador bate com as notas");
+            simulation.close();
+            check(simulation.awaitTermination(2000), "Threads devem encerrar no modo monitor");
+        }
+        MailboxTest.run();
+        System.out.println("OK: capacidade, FIFO, concorrencia, interrupcao, cheio/vazio, pausa, reset, encerramento,"
+                + " monitor, deteccao de corrida sem mutex e Mailbox (3b, 3s, monitor completo, semaforos)");
     }
 }
