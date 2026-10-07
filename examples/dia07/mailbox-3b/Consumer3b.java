@@ -6,24 +6,31 @@
  * (The classes ...3b, ...3g and ...3s for the the Consumers,
  * Producers and ThreadSyncs are all the same except for variable
  * name changes.)
+ *
+ * Aula de 7/10: o CONSUMIDOR. Uma thread que, para sempre, olha a caixa
+ * a cada 20 ms e imprime o que encontrar. Se nao ha correio, imprime
+ * "How sad, no mail .." (a caixa 3b nao faz o consumidor esperar).
  */
 
 public class Consumer3b extends Thread {
-	private Mailbox3b myMailbox;
-	private final int CHECKTIME = 20;
+	private Mailbox3b myMailbox;		// a mesma caixa dos produtores
+	private final int CHECKTIME = 20;	// intervalo (ms) entre duas consultas
 
 	public Consumer3b(Mailbox3b box) {
 		myMailbox = box;
 	}
 
 	public void run () {
-		while(true) {
+		while(true) {		// laco infinito
+			// Pergunta "tem correio?" e imprime a resposta, seja ela qual for.
+			// Isto e parecido com espera ocupada: o consumidor fica consultando
+			// a caixa repetidamente, mesmo quando ela esta vazia.
 			System.out.println(myMailbox.retrieveMessage());
 			try {
-				Thread.sleep(CHECKTIME);
+				Thread.sleep(CHECKTIME);	// espera 20 ms e pergunta de novo
 			}
 			catch (InterruptedException e) {}
-			
+
 		}
 	}
 }

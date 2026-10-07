@@ -201,6 +201,32 @@ Compilar & normal & com \texttt{-pthread} \\
 \end{center}
 \end{frame}
 
+\begin{frame}[fragile]{Compilando e executando os exemplos}
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+$ gcc -Wall -Wextra examples/dia07/corrida.c -o corrida -pthread
+$ ./corrida
+$ javac -d build/java-3b examples/dia07/mailbox-3b/*.java
+$ timeout 5 java -cp build/java-3b ThreadSync3b
+\end{lstlisting}
+
+\begin{center}
+\scriptsize
+\begin{tabular}{@{}>{\ttfamily}l>{\raggedright\arraybackslash}p{9.2cm}@{}}
+\toprule
+\textrm{\textbf{Parte}} & \textbf{O que significa} \\
+\midrule
+-pthread & Prepara o programa para usar threads e semáforos (use sempre hoje). \\
+-o corrida & Nome do executável; \texttt{./corrida} executa. \\
+javac -d build/java-3b & Compila todos os \texttt{.java} da pasta (\texttt{*.java}) e guarda os \texttt{.class} em \texttt{build/java-3b}. \\
+java -cp build/java-3b & Executa a classe indicada, procurando os \texttt{.class} nessa pasta. \\
+timeout 5 & Encerra depois de 5 segundos: as mailboxes nunca terminam sozinhas. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\scriptsize Na prática 1, acrescente \texttt{-std=c11 -Wpedantic -Werror}: avisos viram erros.
+\end{frame}
+
 % ============================================================
 \section{Condição de corrida}
 % ============================================================
@@ -350,8 +376,8 @@ static void enter_region(int eu) {
 static void leave_region(int eu) { atomic_store(&interested[eu], 0); }
 \end{lstlisting}
 
-\begin{lstlisting}[style=terminal]
-$ gcc -Wall -Wextra peterson-code.c -o peterson -pthread && ./peterson
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+$ gcc -Wall -Wextra examples/dia07/peterson-code.c -o peterson -pthread && ./peterson
 Contador: 20000 (esperado: 20000)
 \end{lstlisting}
 
@@ -460,6 +486,37 @@ início & 3 & 0 & 0 \\
 \end{exampleblock}
 \end{frame}
 
+\begin{frame}[fragile]{Voltando ao \texttt{corrida.c}: dois consertos}
+\begin{columns}[T]
+\column{0.48\textwidth}
+\textbf{Operação atômica}
+\begin{lstlisting}[style=codigo, basicstyle=\ttfamily\scriptsize\color{termfg}]
+static atomic_int contador = 0;
+...
+atomic_fetch_add(&contador, 1);
+\end{lstlisting}
+\scriptsize A soma inteira vira uma operação indivisível (\texttt{lock addl} no processador).
+
+\column{0.48\textwidth}
+\textbf{Mutex}
+\begin{lstlisting}[style=codigo, basicstyle=\ttfamily\scriptsize\color{termfg}]
+pthread_mutex_lock(&trava);
+contador = contador + 1;
+pthread_mutex_unlock(&trava);
+\end{lstlisting}
+\scriptsize Só uma thread por vez; quem encontra a trava ocupada dorme.
+\end{columns}
+
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+$ gcc -Wall -Wextra examples/dia07/corrida_atomic.c -o corrida-atomic -pthread
+$ ./corrida-atomic
+Contador: 2000000 (esperado: 2000000)
+$ gcc -Wall -Wextra examples/dia07/corrida_mutex.c -o corrida-mutex -pthread
+$ ./corrida-mutex
+Contador: 2000000 (esperado: 2000000)
+\end{lstlisting}
+\end{frame}
+
 % ============================================================
 \section{Produtor-consumidor em C}
 % ============================================================
@@ -517,7 +574,7 @@ Cada thread \textbf{espera o que consome} e \textbf{avisa o que cria}. O produto
 \end{exampleblock}
 
 \begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
-$ gcc -Wall -Wextra prod_cons.c -o prod_cons -pthread && ./prod_cons
+$ gcc -Wall -Wextra examples/dia07/prod_cons.c -o prod_cons -pthread && ./prod_cons
 Produzido: 29 | ocupacao: 1/20   ...   Fim: 40 itens produzidos e consumidos; buffer vazio.
 \end{lstlisting}
 \end{frame}
@@ -558,7 +615,7 @@ Cada um espera algo que só o outro pode dar. O programa trava para sempre.
 \section{Ver funcionando: simulação}
 % ============================================================
 
-\begin{frame}{Simulação ``Produção de dinheiro''}
+\begin{frame}[fragile]{Simulação ``Produção de dinheiro''}
 \begin{columns}[T]
 \column{0.5\textwidth}
 \small
@@ -583,11 +640,15 @@ vagas livres & \texttt{empty} \\
     \item Por baixo: threads e três semáforos, como no C.
 \end{itemize}
 
-\vspace{0.4em}
 \begin{exampleblock}{Só para ver}
-Cinco minutos para \textbf{enxergar} o que acabamos de estudar. Não há atividade sobre a simulação.
+Cinco minutos para \textbf{enxergar} o que estudamos. Sem atividade.
 \end{exampleblock}
 \end{columns}
+
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+# compila e abre a janela (atalho: make run-simulation)
+$ mvn -f pc_trabalho04_202011393/pom.xml javafx:run
+\end{lstlisting}
 \end{frame}
 
 \begin{frame}{O que observar}
@@ -743,7 +804,7 @@ Trava sem terminar (\texttt{Ctrl + C}) & Alguém espera um semáforo que ningué
 \textbf{Previsão:} as mensagens vão chegar certas?
 
 \begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
-$ javac -d build/java-3b Monitor-20261002T192224Z-1-001/Monitor/1/*.java
+$ javac -d build/java-3b examples/dia07/mailbox-3b/*.java
 $ timeout --foreground 5 java -cp build/java-3b ThreadSync3b | grep "My name"
 \end{lstlisting}
 
@@ -817,7 +878,7 @@ public synchronized String retrieveMessage() {
 \textbf{Previsão:} as mensagens ainda vão se misturar? E o ``How sad, no mail''?
 
 \begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
-$ javac -d build/java-3s Monitor-20261002T192224Z-1-001/Monitor/3/*.java
+$ javac -d build/java-3s examples/dia07/mailbox-3s/*.java
 $ timeout 5 java -cp build/java-3s ThreadSync3s
 Looking for my mail ..
 My name is, Dave. I say, Hello, world.
@@ -949,21 +1010,26 @@ Processos isolam a memória e precisam de pipe para conversar. Threads compartil
 
 \begin{frame}[fragile]{Cola: compilar e executar os exemplos}
 \small Na raiz do repositório:
-\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\scriptsize\color{termfg}]
+\begin{lstlisting}[style=terminal, basicstyle=\ttfamily\tiny\color{termfg}]
+# C (sempre com -pthread; && so executa se a compilacao deu certo)
 $ gcc -Wall -Wextra examples/dia07/corrida.c -o corrida -pthread && ./corrida
-$ gcc -Wall -Wextra peterson-code.c -o peterson -pthread && ./peterson
-$ gcc -Wall -Wextra prod_cons.c -o prod_cons -pthread && ./prod_cons
-$ make java && timeout 5 java -cp build/java-3b ThreadSync3b     # mailbox 3b
-$ make java && timeout 5 java -cp build/java-3s ThreadSync3s     # mailbox 3s
-$ make run-caixa                                                 # caixa sem perdas
-$ make run-simulation                                            # Producao de dinheiro
+$ gcc -Wall -Wextra examples/dia07/corrida_atomic.c -o corrida-atomic -pthread && ./corrida-atomic
+$ gcc -Wall -Wextra examples/dia07/corrida_mutex.c -o corrida-mutex -pthread && ./corrida-mutex
+$ gcc -Wall -Wextra examples/dia07/peterson-code.c -o peterson -pthread && ./peterson
+$ gcc -Wall -Wextra examples/dia07/prod_cons.c -o prod_cons -pthread && ./prod_cons
 
-# pratica (avisos viram erros):
+# Java (as mailboxes nunca terminam: timeout encerra em 5 s)
+$ javac -d build/java-3b examples/dia07/mailbox-3b/*.java && timeout 5 java -cp build/java-3b ThreadSync3b
+$ javac -d build/java-3s examples/dia07/mailbox-3s/*.java && timeout 5 java -cp build/java-3s ThreadSync3s
+$ javac -d build/caixa examples/dia07/caixa/*.java && java -cp build/caixa TesteCaixa
+
+# Simulacao Producao de dinheiro
+$ mvn -f pc_trabalho04_202011393/pom.xml javafx:run
+
+# Pratica 1 (avisos viram erros)
 $ gcc -std=c11 -Wall -Wextra -Wpedantic -Werror \
       examples/dia07/prod_cons_atividade.c -o prod-cons-aluno -pthread && ./prod-cons-aluno
 \end{lstlisting}
-
-\small As mailboxes Java nunca terminam sozinhas: o \texttt{timeout 5} encerra depois de 5 segundos (ou use \texttt{Ctrl + C}).
 \end{frame}
 
 \begin{frame}{Para estudar depois}

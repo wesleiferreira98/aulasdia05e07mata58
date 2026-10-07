@@ -51,7 +51,7 @@ Esperar por disponibilidade antes do mutex permite que a outra thread modifique 
 
 ## Monitores Java
 
-Os fontes originais ficam em `Monitor-20261002T192224Z-1-001/Monitor`.
+Os fontes Java ficam em `examples/dia07/mailbox-3b` e `examples/dia07/mailbox-3s` (comentados). A pasta `Monitor-20261002T192224Z-1-001/Monitor` guarda só a página HTML original sobre monitores.
 
 - **1 / Mailbox3b:** acessos sem sincronização; mensagens podem se misturar.
 - **3 / Mailbox3s:** métodos synchronized e espera do consumidor por wait/notify; produtores ainda podem sobrescrever mensagem pendente.

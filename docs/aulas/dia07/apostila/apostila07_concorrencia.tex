@@ -223,8 +223,8 @@ Na raiz do repositório:
 $ gcc -Wall -Wextra examples/dia07/corrida.c -o corrida -pthread && ./corrida
 $ gcc -Wall -Wextra examples/dia07/corrida_atomic.c -o corrida-atomic -pthread && ./corrida-atomic
 $ gcc -Wall -Wextra examples/dia07/corrida_mutex.c -o corrida-mutex -pthread && ./corrida-mutex
-$ gcc -Wall -Wextra peterson-code.c -o peterson -pthread && ./peterson
-$ gcc -Wall -Wextra prod_cons.c -o prod_cons -pthread && ./prod_cons
+$ gcc -Wall -Wextra examples/dia07/peterson-code.c -o peterson -pthread && ./peterson
+$ gcc -Wall -Wextra examples/dia07/prod_cons.c -o prod_cons -pthread && ./prod_cons
 $ make java && timeout 5 java -cp build/java-3b ThreadSync3b
 $ make java && timeout 5 java -cp build/java-3s ThreadSync3s
 $ make run-caixa               # caixa de correio correta em Java
@@ -624,7 +624,7 @@ Se as duas querem entrar, a que esperou entra assim que a outra sair, porque a o
 
 \subsection{Peterson em C}
 
-\lstinputlisting[style=arquivo]{\raiz/peterson-code.c}
+\lstinputlisting[style=arquivo]{\raiz/examples/dia07/peterson-code.c}
 
 \begin{lstlisting}[style=terminal]
 $ ./peterson
@@ -860,7 +860,7 @@ Repare que \cmd{empty + full = N} em todas as linhas. Isso vale sempre que nenhu
 
 \subsection{O programa prod\_cons.c}
 
-\lstinputlisting[style=arquivo]{\raiz/prod_cons.c}
+\lstinputlisting[style=arquivo]{\raiz/examples/dia07/prod_cons.c}
 
 \begin{lstlisting}[style=terminal]
 $ ./prod_cons
@@ -999,9 +999,9 @@ Em Java, todo objeto pode ser um monitor, com \textbf{uma única} variável de c
 
 \subsection{Mailbox 3b: sem sincronização}
 
-O exemplo das pastas \cmd{Monitor/1} e \cmd{Monitor/3} tem uma caixa de correio compartilhada por dois produtores e um consumidor. Dave envia ``Hello, world.'' e Bill envia ``Hot dog!''. Na versão 3b não há nenhuma sincronização:
+O exemplo das pastas \cmd{examples/dia07/mailbox-3b} e \cmd{mailbox-3s} tem uma caixa de correio compartilhada por dois produtores e um consumidor. Dave envia ``Hello, world.'' e Bill envia ``Hot dog!''. Na versão 3b não há nenhuma sincronização:
 
-\lstinputlisting[style=arquivojava, firstline=13, lastline=52, firstnumber=13]{\raiz/Monitor-20261002T192224Z-1-001/Monitor/1/Mailbox3b.java}
+\lstinputlisting[style=arquivojava, firstline=24, lastline=81, firstnumber=24]{\raiz/examples/dia07/mailbox-3b/Mailbox3b.java}
 
 \cmd{storeMessage} escreve a mensagem \textbf{letra por letra} no mesmo array, com uma pequena pausa entre as letras. Se os dois produtores chamam ao mesmo tempo, as letras se misturam. Saída real:
 
@@ -1015,7 +1015,7 @@ Bill ``disse'' a frase de Dave, a mensagem foi cortada, e ``Het dog!'' é metade
 
 \subsection{Mailbox 3s: com monitor}
 
-\lstinputlisting[style=arquivojava, firstline=6, lastline=49, firstnumber=6]{\raiz/Monitor-20261002T192224Z-1-001/Monitor/3/Mailbox3s.java}
+\lstinputlisting[style=arquivojava, firstline=24, lastline=89, firstnumber=24]{\raiz/examples/dia07/mailbox-3s/Mailbox3s.java}
 
 \begin{itemize}
     \item Os dois métodos são \cmd{synchronized}: enquanto um produtor escreve, o outro produtor e o consumidor esperam pela chave. As mensagens saem \textbf{íntegras}.

@@ -19,7 +19,7 @@ N = 5, `empty = 5`, `full = 0`. Depois de dois itens produzidos e um consumido: 
 
 Regra para a turma: **cada thread espera o que consome e avisa o que cria.**
 
-A resposta comentada, com o motivo de cada lacuna e o que acontece nos erros, está em [prod_cons_resposta.c](../../../examples/dia07/prod_cons_resposta.c) (`make run-resposta-dia07`). O programa completo e comentado é o [prod_cons.c](../../../prod_cons.c).
+A resposta comentada, com o motivo de cada lacuna e o que acontece nos erros, está em [prod_cons_resposta.c](../../../examples/dia07/prod_cons_resposta.c) (`make run-resposta-dia07`). O programa completo e comentado é o [prod_cons.c](../../../examples/dia07/prod_cons.c).
 
 ### Sintomas dos erros (todos testados)
 

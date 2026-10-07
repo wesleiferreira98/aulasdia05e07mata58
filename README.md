@@ -35,12 +35,13 @@ Os programas C terminam sozinhos. Saídas e explicações: [guia dos exemplos](d
 ```text
 .
 ├── fork2.c, pipe2.c              # Processos e comunicação
-├── peterson-code.c, prod_cons.c  # Sincronização entre threads
 ├── Makefile                     # Compilação, execução e testes
 ├── docs/                        # Documentação do laboratório e exemplos
 ├── tests/                       # Verificação de comportamento dos exemplos C
 ├── preparacao/                  # Guia e versões C originais
-├── Monitor-.../Monitor/          # Material e exemplos Java fornecidos
+├── examples/dia05/              # Exemplos extras e prática da aula de 5/10
+├── examples/dia07/              # Todos os códigos da aula de 7/10 (C e Java)
+├── Monitor-.../Monitor/          # Página HTML original sobre monitores
 ├── Aulas_Guiadas_...pdf          # Roteiro-base fornecido
 └── .github/                     # CI e modelos de colaboração
 ```

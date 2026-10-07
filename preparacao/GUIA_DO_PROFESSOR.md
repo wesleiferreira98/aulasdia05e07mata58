@@ -137,9 +137,9 @@ Por que a ordem importa? Se um consumidor adquirir mutex e depois esperar por fu
 - Declare explicitamente `time` incluindo `time.h`; trate retornos das APIs. `remove_item` não retorna valor se a condição falhar, embora o protocolo correto deva garantir item disponível.
 - No original, os laços eram infinitos e o join não retornava. A versão revisada produz e consome 40 itens e termina sozinha. A ordem das mensagens varia entre execuções; log não é prova de ausência de corrida.
 
-### Monitores Java: pastas Monitor/1 e Monitor/3
+### Monitores Java: mailboxes 3b e 3s
 
-O caminho real é `Monitor-20261002T192224Z-1-001/Monitor`.
+Os fontes ficam em `examples/dia07/mailbox-3b` e `examples/dia07/mailbox-3s` (no material original, pastas `Monitor/1` e `Monitor/3`). Todos os códigos da aula de 7/10 estão em `examples/dia07/`.
 
 `Mailbox3b` tem array e flag compartilhados por produtores e consumidor. Escritas caractere por caractere podem intercalar, e o consumidor pode observar uma mensagem em construção. Campos privados encapsulam, mas não sincronizam.
 
@@ -261,8 +261,8 @@ Comandos de compilação dos originais, depois dos ajustes pertinentes:
 ```bash
 gcc -Wall -Wextra fork2.c -o /tmp/aula-fork
 gcc -Wall -Wextra pipe2.c -o /tmp/aula-pipe -lm
-gcc -Wall -Wextra peterson-code.c -o /tmp/aula-peterson -pthread
-gcc -Wall -Wextra prod_cons.c -o /tmp/aula-prod-cons -pthread
+gcc -Wall -Wextra examples/dia07/peterson-code.c -o /tmp/aula-peterson -pthread
+gcc -Wall -Wextra examples/dia07/prod_cons.c -o /tmp/aula-prod-cons -pthread
 ```
 
 Esses comandos não constituem garantia de correção concorrente. Não execute Peterson original apenas corrigindo o include e o buffer.
@@ -271,10 +271,10 @@ Java, no laboratório com JDK, usando diretórios temporários para não substit
 
 ```bash
 mkdir -p /tmp/so-java-3b /tmp/so-java-3s
-javac -d /tmp/so-java-3b Monitor-20261002T192224Z-1-001/Monitor/1/*.java
+javac -d /tmp/so-java-3b examples/dia07/mailbox-3b/*.java
 java -cp /tmp/so-java-3b ThreadSync3b
 # Interrompa com Ctrl+C antes de iniciar a outra versão.
-javac -d /tmp/so-java-3s Monitor-20261002T192224Z-1-001/Monitor/3/*.java
+javac -d /tmp/so-java-3s examples/dia07/mailbox-3s/*.java
 java -cp /tmp/so-java-3s ThreadSync3s
 ```
 

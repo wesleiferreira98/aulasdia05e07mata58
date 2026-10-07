@@ -32,8 +32,8 @@ Equivalentes individuais:
 ```bash
 gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -O2 fork2.c -o /tmp/fork2
 gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -O2 pipe2.c -o /tmp/pipe2 -lm
-gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -O2 peterson-code.c -o /tmp/peterson -pthread
-gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -O2 prod_cons.c -o /tmp/prod_cons -pthread
+gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -O2 examples/dia07/peterson-code.c -o /tmp/peterson -pthread
+gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -O2 examples/dia07/prod_cons.c -o /tmp/prod_cons -pthread
 ```
 
 ## Java

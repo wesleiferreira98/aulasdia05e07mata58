@@ -50,8 +50,8 @@ Distribua [ATIVIDADE.md](ATIVIDADE.md) sem o [gabarito](GABARITO.md). Comandos e
 | 40 a 45 | Por que monitores? | Slides | Chave do objeto, `wait`, `notify` |
 | **Parte 2** | **Prática** | | |
 | 45 a 58 | Prática 1: seis lacunas em C | `prod_cons_atividade.c` | Programa termina com 40 itens |
-| 58 a 68 | Prática 2: Mailbox 3b | `Monitor/1` | Ver mensagens misturadas; questões 3 a 5 |
-| 68 a 80 | Prática 3: Mailbox 3s | `Monitor/3` | Comparar com a 3b; questão 6 |
+| 58 a 68 | Prática 2: Mailbox 3b | `examples/dia07/mailbox-3b` | Ver mensagens misturadas; questões 3 a 5 |
+| 68 a 80 | Prática 3: Mailbox 3s | `examples/dia07/mailbox-3s` | Comparar com a 3b; questão 6 |
 | 80 a 90 | Atividade final e fechamento | Papel | Questões 7 a 10 |
 
 ---
@@ -210,7 +210,7 @@ Explique o exemplo antes de rodar: uma única `Mailbox3b` é compartilhada por *
 **Peça uma previsão:** "As mensagens vão chegar certas?"
 
 ```bash
-javac -d build/java-3b Monitor-20261002T192224Z-1-001/Monitor/1/*.java
+javac -d build/java-3b examples/dia07/mailbox-3b/*.java
 timeout --foreground 5 java -cp build/java-3b ThreadSync3b | grep "My name"
 ```
 
@@ -236,7 +236,7 @@ Mostre no slide o que mudou: `storeMessage()` e `retrieveMessage()` agora são `
 **Peça uma previsão:** "As mensagens ainda vão se misturar? O consumidor ainda vai dizer 'How sad, no mail'?"
 
 ```bash
-javac -d build/java-3s Monitor-20261002T192224Z-1-001/Monitor/3/*.java
+javac -d build/java-3s examples/dia07/mailbox-3s/*.java
 timeout 5 java -cp build/java-3s ThreadSync3s
 ```
 

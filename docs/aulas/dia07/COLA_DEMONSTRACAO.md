@@ -70,7 +70,7 @@ Para mostrar a solução: `make run-resposta-dia07`.
 ### Prática 2: Mailbox 3b (58 a 68 min)
 
 ```bash
-javac -d build/java-3b Monitor-20261002T192224Z-1-001/Monitor/1/*.java
+javac -d build/java-3b examples/dia07/mailbox-3b/*.java
 timeout --foreground 5 java -cp build/java-3b ThreadSync3b | grep "My name"
 ```
 
@@ -80,12 +80,12 @@ Sem o `| grep "My name"`, aparecem dezenas de `How sad, no mail ..`: o consumido
 
 **Não tire o `--foreground`** enquanto houver `| grep`: sem ele, num terminal interativo, o `timeout` derruba o `grep` junto e a tela fica vazia.
 
-Se sobrar tempo: mude `MAXPROCESSTIME = 7` para `50` em `Monitor-.../Monitor/1/Mailbox3b.java`, recompile e rode de novo. A maioria das mensagens passa a sair misturada. **Desfaça a mudança depois** (`git checkout -- Monitor-20261002T192224Z-1-001`).
+Se sobrar tempo: mude `MAXPROCESSTIME = 7` para `50` em `examples/dia07/mailbox-3b/Mailbox3b.java`, recompile e rode de novo. A maioria das mensagens passa a sair misturada. **Desfaça a mudança depois** (`git checkout -- Monitor-20261002T192224Z-1-001`).
 
 ### Prática 3: Mailbox 3s (68 a 80 min)
 
 ```bash
-javac -d build/java-3s Monitor-20261002T192224Z-1-001/Monitor/3/*.java
+javac -d build/java-3s examples/dia07/mailbox-3s/*.java
 timeout 5 java -cp build/java-3s ThreadSync3s
 ```
 
@@ -114,6 +114,6 @@ Questões 7 a 10, individuais, no papel. Nada para rodar.
 make test && make java                                                       # antes da aula
 make run-simulation                                                          # 35 min: só demonstração
 gcc -std=c11 -Wall -Wextra -Wpedantic -Werror examples/dia07/prod_cons_atividade.c -o prod-cons-aluno -pthread && ./prod-cons-aluno   # prática 1
-javac -d build/java-3b Monitor-20261002T192224Z-1-001/Monitor/1/*.java && timeout --foreground 5 java -cp build/java-3b ThreadSync3b | grep "My name"   # prática 2
-javac -d build/java-3s Monitor-20261002T192224Z-1-001/Monitor/3/*.java && timeout 5 java -cp build/java-3s ThreadSync3s   # prática 3
+javac -d build/java-3b examples/dia07/mailbox-3b/*.java && timeout --foreground 5 java -cp build/java-3b ThreadSync3b | grep "My name"   # prática 2
+javac -d build/java-3s examples/dia07/mailbox-3s/*.java && timeout 5 java -cp build/java-3s ThreadSync3s   # prática 3
 ```

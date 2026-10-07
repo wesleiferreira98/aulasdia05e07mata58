@@ -36,7 +36,7 @@ ________________________________________________________________________________
 Uma única `Mailbox3b` é compartilhada por um consumidor e dois produtores: Dave envia "Hello, world." e Bill envia "Hot dog!".
 
 ```bash
-javac -d build/java-3b Monitor-20261002T192224Z-1-001/Monitor/1/*.java
+javac -d build/java-3b examples/dia07/mailbox-3b/*.java
 timeout --foreground 5 java -cp build/java-3b ThreadSync3b | grep "My name"
 ```
 
@@ -56,7 +56,7 @@ ________________________________________________________________________________
 ## Prática 3: Mailbox com monitor (Java, versão 3s)
 
 ```bash
-javac -d build/java-3s Monitor-20261002T192224Z-1-001/Monitor/3/*.java
+javac -d build/java-3s examples/dia07/mailbox-3s/*.java
 timeout 5 java -cp build/java-3s ThreadSync3s
 ```
 

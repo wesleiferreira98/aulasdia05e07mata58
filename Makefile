@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -std=c11 -Wall -Wextra -Wpedantic -Werror -O2
 BUILD = build
-MONITOR = Monitor-20261002T192224Z-1-001/Monitor
+DIA07 = examples/dia07
 PROGRAMS = $(BUILD)/fork2 $(BUILD)/pipe2 $(BUILD)/peterson $(BUILD)/prod_cons \
            $(BUILD)/pipe-soma $(BUILD)/fork-basico $(BUILD)/memoria-independente \
            $(BUILD)/pipe-soma-resposta $(BUILD)/corrida $(BUILD)/prod-cons-resposta \
@@ -19,10 +19,10 @@ $(BUILD)/fork2: fork2.c | $(BUILD)
 $(BUILD)/pipe2: pipe2.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@ -lm
 
-$(BUILD)/peterson: peterson-code.c | $(BUILD)
+$(BUILD)/peterson: $(DIA07)/peterson-code.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@ -pthread
 
-$(BUILD)/prod_cons: prod_cons.c | $(BUILD)
+$(BUILD)/prod_cons: $(DIA07)/prod_cons.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@ -pthread
 
 test: all
@@ -30,12 +30,12 @@ test: all
 
 java: $(BUILD)/java-3b/.compiled $(BUILD)/java-3s/.compiled
 
-$(BUILD)/java-3b/.compiled: $(wildcard $(MONITOR)/1/*.java)
+$(BUILD)/java-3b/.compiled: $(wildcard $(DIA07)/mailbox-3b/*.java)
 	mkdir -p $(BUILD)/java-3b
 	javac -d $(BUILD)/java-3b $^
 	touch $@
 
-$(BUILD)/java-3s/.compiled: $(wildcard $(MONITOR)/3/*.java)
+$(BUILD)/java-3s/.compiled: $(wildcard $(DIA07)/mailbox-3s/*.java)
 	mkdir -p $(BUILD)/java-3s
 	javac -d $(BUILD)/java-3s $^
 	touch $@
