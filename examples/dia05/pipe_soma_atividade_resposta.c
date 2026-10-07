@@ -1,6 +1,4 @@
 /* RESPOSTA DA ATIVIDADE: as seis lacunas de pipe_soma_atividade.c preenchidas.
- * Cada lacuna vem marcada com "LACUNA n" e explica a resposta, o motivo
- * e o que acontece se a resposta estiver errada.
  *
  * Resumo das respostas:
  *   1. fd[0]                                        (filho fecha a leitura)
